@@ -1,55 +1,59 @@
+import datetime
+
 import tweepy
 import os, json, time
 from typing import List
+from json_manager import JsonManager
+from tweet_class import Tweet
 
-class Tweet:
+
+class TwitterStreamAPI(tweepy.StreamListener):
     def __init__(self):
-        raise NotImplementedError
+        super().__init__()
+        self.json = JsonManager()
+        self.tweets_id_collected = self.json.check_initial_id()
+
+    def on_status(self, status):
+        tweet = Tweet.from_api_to_class(status)
+        if self.json.check_id(tweet.id, self.tweets_id_collected):
+            self.json.save(status._json)
+
+    def on_limit(self, status):
+        print("Rate Limit Exceeded, Sleep for 15 Mins")
+        time.sleep(15 * 60)
+        return True
+
+    def on_error(self, status_code):
+            return True
 
 
-class JsonManager:
-    def __init__(self, path: str = 'twitter.json'):
-        if not os.path.exists(path):
-            with open(path, 'w') as f:
-                json.dump([], f)
-        self.path = path
-
-    def load(self):
-        with open(self.path) as file:
-            return json.load(file)
-
-    def save(self, news: List[dict]):
-        storico = self.load()
-        storico.append(news)
-        with open(self.path, 'w') as f:
-            json.dump(storico, f)
+def get_api() -> tweepy.API:
+    auth = tweepy.OAuthHandler(os.getenv("CSS_KEY"), os.getenv("CSS_SECRET_KEY"))
+    auth.set_access_token(os.getenv("CSS_TOKEN"), os.getenv("CSS_SECRET_TOKEN"))
+    return tweepy.API(auth,
+                      wait_on_rate_limit=True,
+                      wait_on_rate_limit_notify=True)
 
 
-class TwitterAPI:
-    def __init__(self):
-        self.auth = tweepy.OAuthHandler(os.getenv("CSS_KEY"), os.getenv("CSS_SECRET_KEY"))
-        self.auth.set_access_token(os.getenv("CSS_TOKEN"), os.getenv("CSS_SECRET_TOKEN"))
-        self.api = tweepy.API(self.auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
+def loop(fun):
+    while True:
+        try:
+            print(f'Start looping at {datetime.datetime.now()}')
+            fun()
+        except Exception as e:
+            print(f'Error: {e} at {datetime.datetime.now()}')
+            time.sleep(10*60)
 
-    def tweet_stream(self, q: List, s: str):
-        query = f"{q} -filter:retweets" #avoid retweets
-        jsonDB = JsonManager()
-        stream = tweepy.Cursor(self.api.search,
-                                q=query, since = s,
-                                result_type="mixed",
-                                lang="it", tweet_mode="extended").items()
+@loop
+def main():
+    stream = TwitterStreamAPI()
+    myStream = tweepy.Stream(auth=get_api().auth,
+                             listener=stream, tweet_mode='extended')
+    q = ['novax', 'iononmivaccino','nogreenpass','dittaturasanitaria','bigpharma',
+         'obbligovaccinale', 'governocriminale', 'nogreenpassobbligatorio']
+    myStream.filter(track=q, languages=['it'])
 
-        for tweet in self.limit_handled(stream):
-            jsonDB.save(tweet._json)
-            time.sleep(1)
-
-    def limit_handled(self, cursor):
-        while True:
-            try: yield cursor.next()
-            except tweepy.RateLimitError: time.sleep(15 * 60)
 
 if __name__ == '__main__':
-    hashtags = ['#iononmivaccino OR #dittaturasanitaria OR #nogreenpass OR #vienegiututto']
-    since = "2021-8-12" # no more than one week
-    TwitterAPI().tweet_stream(q=hashtags, s=since)
+    main()
 
