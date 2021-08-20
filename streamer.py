@@ -16,12 +16,9 @@ class TwitterStreamAPI(tweepy.StreamListener):
 
     def on_status(self, status):
         tweet = Tweet.from_api_to_class(status)
-        pprint(status._json)
-        pprint(tweet.to_repr())
-
-        # if self.json.check_id(tweet.id, self.tweets_id_collected):
-        #     self.json.save(tweet.to_repr())
-        #     print(f'Tweets Collected: {len(self.tweets_id_collected)}')
+        if self.json.check_id(tweet.id, self.tweets_id_collected):
+            self.json.save(tweet.to_repr())
+            print(f'Tweets Collected: {len(self.tweets_id_collected)}')
 
     def on_limit(self, status):
         print("Rate Limit Exceeded, Sleep for 15 Mins")
