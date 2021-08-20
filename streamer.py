@@ -5,7 +5,8 @@ from typing import List
 from json_manager import JsonManager
 from tweet_class import Tweet
 from keys import get_api_aws
-
+import traceback
+from pprint import pprint
 
 class TwitterStreamAPI(tweepy.StreamListener):
     def __init__(self):
@@ -15,10 +16,12 @@ class TwitterStreamAPI(tweepy.StreamListener):
 
     def on_status(self, status):
         tweet = Tweet.from_api_to_class(status)
+        pprint(status._json)
+        print(tweet.media_text, tweet.external_url)
+        time.sleep(60)
         # if self.json.check_id(tweet.id, self.tweets_id_collected):
-        #     self.json.save(status._json)
-        print(status)
-        print(f'Tweets Collected: {len(self.tweets_id_collected)}')
+        #     self.json.save(tweet.to_repr())
+        #     print(f'Tweets Collected: {len(self.tweets_id_collected)}')
 
     def on_limit(self, status):
         print("Rate Limit Exceeded, Sleep for 15 Mins")
@@ -42,15 +45,20 @@ def loop(fun):
             print(f'Start looping at {datetime.datetime.now()}')
             fun()
         except Exception as e:
-            print(f'Error: {e} at {datetime.datetime.now()}')
+            now = datetime.datetime.now().strftime('%Y-%m-%d | %H:%M:%S')
+            print(f'Error: {e} at {now}')
+            with open("exceptions.log", "a") as logfile:
+                logfile.write(f"\n\n {now} \n")
+                traceback.print_exc(file=logfile)
             time.sleep(10*60)
 
 @loop
 def main():
-    q = ['iononmivaccino','nogreenpass','dittaturasanitaria','bigpharma','nocavie',
+    q = ['iononmivaccino','nogreenpass','dittaturasanitaria','bigpharma','nocavie','taliban',
          'Montagnier', 'obbligovaccinale', 'governocriminale', 'nogreenpassobbligatorio','terzadose']
     myStream = tweepy.Stream(auth=get_api_aws().auth, listener=TwitterStreamAPI())
-    myStream.filter(track=q, languages=['it'])
+    myStream.filter(track=q, languages=['en'])
+
 
 if __name__ == '__main__':
     main()
