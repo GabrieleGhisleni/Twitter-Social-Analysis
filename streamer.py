@@ -15,8 +15,9 @@ class TwitterStreamAPI(tweepy.StreamListener):
 
     def on_status(self, status):
         tweet = Tweet.from_api_to_class(status)
-        if self.json.check_id(tweet.id, self.tweets_id_collected):
-            self.json.save(status._json)
+        # if self.json.check_id(tweet.id, self.tweets_id_collected):
+        #     self.json.save(status._json)
+        print(status)
         print(f'Tweets Collected: {len(self.tweets_id_collected)}')
 
     def on_limit(self, status):
