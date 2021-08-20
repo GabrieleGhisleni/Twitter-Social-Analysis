@@ -17,8 +17,8 @@ class TwitterStreamAPI(tweepy.StreamListener):
     def on_status(self, status):
         tweet = Tweet.from_api_to_class(status)
         pprint(status._json)
-        print(tweet.media_text, tweet.external_url)
-        time.sleep(60)
+        pprint(tweet.to_repr())
+
         # if self.json.check_id(tweet.id, self.tweets_id_collected):
         #     self.json.save(tweet.to_repr())
         #     print(f'Tweets Collected: {len(self.tweets_id_collected)}')
@@ -54,10 +54,10 @@ def loop(fun):
 
 @loop
 def main():
-    q = ['iononmivaccino','nogreenpass','dittaturasanitaria','bigpharma','nocavie','taliban',
+    q = ['iononmivaccino','nogreenpass','dittaturasanitaria','bigpharma','nocavie',
          'Montagnier', 'obbligovaccinale', 'governocriminale', 'nogreenpassobbligatorio','terzadose']
     myStream = tweepy.Stream(auth=get_api_aws().auth, listener=TwitterStreamAPI())
-    myStream.filter(track=q, languages=['en'])
+    myStream.filter(track=q, languages=['it'])
 
 
 if __name__ == '__main__':

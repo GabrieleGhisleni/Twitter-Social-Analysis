@@ -35,16 +35,16 @@ class Tweet:
                     hashtags=self.hashtags,
                     external_url=self.external_url,
                     author_followers=self.author_followers,
-                    author_followe=self.author_follow,
+                    author_follow=self.author_follow,
                     author_loc=self.author_loc,
                     media_text=self.media_text)
 
     @staticmethod
     def from_api_to_class(status: tweepy.api.API) -> Tweet:
         is_a_reply, hashtags = False, None
-        text = extended_tweet(status)
+        text = extended_tweet(status._json)
         media_text = check_and_extract_image_text(status)
-        external_url = find_external_url(status)
+        external_url = find_external_url(status._json)
         if status.in_reply_to_status_id or status.in_reply_to_user_id: is_a_reply = True
         if status.entities['hashtags']: hashtags = [i['text'] for i in status.entities['hashtags']]
         return Tweet( created_at=str(status.created_at),
@@ -58,7 +58,7 @@ class Tweet:
                       author_loc=status.author.location,
                       hashtags=hashtags,
                       external_url=external_url,
-                      media_text=media_text )
+                      media_text=media_text)
 
 
 def extract_text_from_image(url, timeout=5, path_to_tesseract=r"C:\Program Files\Tesseract-OCR\tesseract.exe") -> str or None:
@@ -77,9 +77,12 @@ def check_media(tweet: dict) -> str or None:
     original, retweet = False, False
     if 'media' in tweet['entities']:
         original = tweet['entities']['media'][0]['media_url_https']
-    if 'retweeted_status' in tweet:
+    elif 'retweeted_status' in tweet:
         if 'media' in tweet['retweeted_status']['entities']:
             retweet = (tweet['retweeted_status']['entities']['media'][0]['media_url_https'])
+        elif 'extended_tweet' in tweet['retweeted_status']:
+            if 'media' in tweet['retweeted_status']['extended_tweet']['entities']:
+                retweet = tweet['retweeted_status']['extended_tweet']['entities']['media'][0]['media_url_https']
     if retweet and not original: return retweet
     elif original and not retweet: return original
     elif original and retweet: return original
@@ -93,23 +96,21 @@ def check_and_extract_image_text(tweet: tweepy.api.API) -> str or None:
     return media_text
 
 
-def extended_tweet(tweet: tweepy.api.API) -> str:
-    if 'extended_tweet' in tweet._json:
-        text = tweet._json['extended_tweet']['full_text']
-    elif 'retweeted_status' in tweet._json:
-        if 'extended_tweet' in tweet._json['retweeted_status']:
-            text = tweet._json['retweeted_status']['extended_tweet']['full_text']
-        elif 'text' in tweet._json['retweeted_status']:
-            text = tweet._json['retweeted_status']['text']
-        else: text = tweet.text
-    else:
-        text = tweet.text
+def extended_tweet(tweet: dict) -> str:
+    if 'extended_tweet' in tweet:
+        text = tweet['extended_tweet']['full_text']
+    elif 'retweeted_status' in tweet:
+        if 'extended_tweet' in tweet['retweeted_status']:
+            text = tweet['retweeted_status']['extended_tweet']['full_text']
+        elif 'text' in tweet['retweeted_status']:
+            text = tweet['retweeted_status']['text']
+    else: text = tweet['text']
     return text_first_clean(text)
 
 
 def text_first_clean(text: str) -> str:
-    for word in text:
-        if word.startswith('@'): text.replace(word, '')
+    for word in text.split(' '):
+        if word.startswith('@') or word.startswith('http'): text = text.replace(word, '')
     text = unicodedata.normalize('NFD', text)
     text = text.encode('ascii', 'ignore')
     text = text.decode("utf-8")
@@ -119,15 +120,25 @@ def text_first_clean(text: str) -> str:
     return text
 
 
-def find_external_url(tweet: tweepy.api.API) -> str or None:
-    if 'retweeted_status' in tweet._json:
-        if 'extended_tweet' in tweet._json['retweeted_status']:
-            if tweet._json['retweeted_status']['extended_tweet']['entities']['urls']:
-                return tweet._json['retweeted_status']['extended_tweet']['entities']['urls'][0]['expanded_url']
-        elif tweet._json['retweeted_status']['entities']['urls']:
-                return tweet._json['retweeted_status']['entities']['urls'][0]['expanded_url']
-    elif tweet._json['entities']['urls']:
-        return tweet._json['entities']['urls'][0]['expanded_url']
+def find_external_url(tweet: dict) -> str or None:
+    if 'retweeted_status' in tweet:
+        if 'extended_tweet' in tweet['retweeted_status']:
+            if tweet['retweeted_status']['extended_tweet']['entities']['urls']:
+                return tweet['retweeted_status']['extended_tweet']['entities']['urls'][0]['expanded_url']
+            elif tweet['retweeted_status']['entities']['urls']:
+                return tweet['retweeted_status']['entities']['urls'][0]['expanded_url']
+        elif 'quoted_status' in tweet['retweeted_status']:
+            if 'extended_entities' in tweet['retweeted_status']['quoted_status']:
+                if tweet['retweeted_status']['quoted_status']['extended_entities']:
+                    return tweet['retweeted_status']['quoted_status']['extended_entities']['media'][0]['expanded_url']
+            elif tweet['quoted_status']['entities']['urls']:
+                return tweet['quoted_status']['entities']['urls'][0]['expanded_url']
+    elif tweet['entities']['urls']:
+        return tweet['entities']['urls'][0]['expanded_url']
+    elif 'quoted_status' in tweet:
+        if tweet['quoted_status']['entities']['urls']:
+            return tweet['quoted_status']['entities']['urls'][0]['expanded_url']
+
 
 
 
