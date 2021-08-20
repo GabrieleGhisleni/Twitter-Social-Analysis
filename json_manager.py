@@ -1,5 +1,6 @@
 from typing import List
-import os, json
+import os
+import json
 
 
 class JsonManager:
@@ -30,3 +31,4 @@ class JsonManager:
         if tweet_id not in check:
             check.add(tweet_id)
             return True
+

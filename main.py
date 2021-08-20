@@ -1,10 +1,10 @@
 import datetime
-
 import tweepy
 import os, json, time
 from typing import List
 from json_manager import JsonManager
 from tweet_class import Tweet
+from keys import get_api_aws
 
 
 class TwitterStreamAPI(tweepy.StreamListener):
@@ -17,6 +17,7 @@ class TwitterStreamAPI(tweepy.StreamListener):
         tweet = Tweet.from_api_to_class(status)
         if self.json.check_id(tweet.id, self.tweets_id_collected):
             self.json.save(status._json)
+        print(f'Tweets Collected: {len(self.tweets_id_collected)}')
 
     def on_limit(self, status):
         print("Rate Limit Exceeded, Sleep for 15 Mins")
@@ -34,7 +35,6 @@ def get_api() -> tweepy.API:
                       wait_on_rate_limit=True,
                       wait_on_rate_limit_notify=True)
 
-
 def loop(fun):
     while True:
         try:
@@ -46,13 +46,10 @@ def loop(fun):
 
 @loop
 def main():
-    stream = TwitterStreamAPI()
-    myStream = tweepy.Stream(auth=get_api().auth,
-                             listener=stream, tweet_mode='extended')
-    q = ['novax', 'iononmivaccino','nogreenpass','dittaturasanitaria','bigpharma',
-         'obbligovaccinale', 'governocriminale', 'nogreenpassobbligatorio']
+    q = ['iononmivaccino','nogreenpass','dittaturasanitaria','bigpharma','nocavie',
+         'Montagnier', 'obbligovaccinale', 'governocriminale', 'nogreenpassobbligatorio','terzadose']
+    myStream = tweepy.Stream(auth=get_api_aws().auth, listener=TwitterStreamAPI())
     myStream.filter(track=q, languages=['it'])
-
 
 if __name__ == '__main__':
     main()
