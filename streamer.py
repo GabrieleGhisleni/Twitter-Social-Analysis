@@ -8,6 +8,7 @@ from keys import get_api_aws
 import traceback
 from pprint import pprint
 
+
 class TwitterStreamAPI(tweepy.StreamListener):
     def __init__(self):
         super().__init__()
@@ -36,7 +37,7 @@ def get_api() -> tweepy.API:
                       wait_on_rate_limit=True,
                       wait_on_rate_limit_notify=True)
 
-def loop(fun):
+def log_loop(fun):
     while True:
         try:
             print(f'Start looping at {datetime.datetime.now()}')
@@ -49,7 +50,7 @@ def loop(fun):
                 traceback.print_exc(file=logfile)
             time.sleep(10*60)
 
-@loop
+@log_loop
 def main():
     q = ['iononmivaccino','nogreenpass','dittaturasanitaria','bigpharma','nocavie',
          'Montagnier', 'obbligovaccinale', 'governocriminale', 'nogreenpassobbligatorio','terzadose']
