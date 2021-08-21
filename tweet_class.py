@@ -6,6 +6,7 @@ from pytesseract import pytesseract
 import tweepy
 import unicodedata
 
+
 class Tweet:
     def __init__(self, created_at, id, tweet_text, is_reply, reply_count, retweet_count, hashtags, external_url,
                  author_followers, author_follow, author_loc, media_text):
@@ -138,8 +139,4 @@ def find_external_url(tweet: dict) -> str or None:
     elif 'quoted_status' in tweet:
         if tweet['quoted_status']['entities']['urls']:
             return tweet['quoted_status']['entities']['urls'][0]['expanded_url']
-
-
-
-
 
