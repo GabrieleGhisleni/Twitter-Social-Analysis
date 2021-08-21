@@ -116,7 +116,7 @@ def text_first_clean(text: str) -> str:
     text = text.decode("utf-8")
     text = text.replace("\n", '')
     text = text.lower()
-    text = re.sub("[^a-zA-Z-0-9]+", ' ', text)
+    text = re.sub("[^a-zA-Z]+", ' ', text)
     return text
 
 
