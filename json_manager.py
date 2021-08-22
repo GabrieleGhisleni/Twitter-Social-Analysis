@@ -25,7 +25,7 @@ class JsonManager:
     def check_initial_id(self) -> set:
         storico, check_set = self.load(), set()
         for i in storico:
-            check_set.add(i['id_str'])
+            check_set.add(i['id'])
         print(f"Unique ID founded: {len(check_set)}")
         return check_set
 

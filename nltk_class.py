@@ -24,8 +24,15 @@ class NltkTextProcessing:
         #token = [self.stemmer.stem(word) for word in token]
         return res
 
-    def add_processed_column(self, df: pd.DataFrame, save: bool = False) -> pd.DataFrame:
+    def process_df_text_column(self, df: pd.DataFrame, save: bool = False) -> pd.DataFrame:
         df['tweet_text'] = df['tweet_text'].apply(self.preprocess_text)
+        if save: df.to_csv('tweets.csv')
+        return df
+
+    def process_df_hash_column(self, df: pd.DataFrame, save: bool = False) -> pd.DataFrame:
+        def hash_process(hashes):
+            if hashes: return [hashs.lower() for hashs in hashes]
+        df['hashtags'] = df['hashtags'].apply(hash_process)
         if save: df.to_csv('tweets.csv')
         return df
 
@@ -68,5 +75,5 @@ if __name__ == '__main__':
     with open('twitter.json', 'r') as file:
         tweet = pd.DataFrame(json.load(file))
     nlp = NltkTextProcessing()
-    tweet_df = nlp.add_processed_column(tweet)
-    nlp.frequency_dist(tweet_df)
+
+

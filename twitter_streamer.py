@@ -52,8 +52,9 @@ def log_loop(fun):
 
 @log_loop
 def main():
-    q = ['iononmivaccino','nogreenpass','dittaturasanitaria','bigpharma','nocavie',
-         'Montagnier', 'obbligovaccinale', 'governocriminale', 'nogreenpassobbligatorio','terzadose']
+    q = ['iononmivaccino','nogreenpass','dittaturasanitaria','bigpharma','nocavie','nessunacorrelazione',
+         'meluzzi', 'Montagnier', 'obbligovaccinale', 'governocriminale', 'nogreenpassobbligatorio',
+         'terzadose', 'PassSanitaire','somministrazioneDiCortesia']
     myStream = tweepy.Stream(auth=get_api_aws().auth, listener=TwitterStreamAPI())
     myStream.filter(track=q, languages=['it'])
 

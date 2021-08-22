@@ -34,8 +34,7 @@ class NetworkPlot:
                       pos=layout,
                       cmap=plt.get_cmap('autumn'),
                       node_size=self.get_node_size(),
-                      node_color=self.get_node_color()
-                      )
+                      node_color=self.get_node_color())
 
         networkx.draw_networkx_labels(self.graph,
                                       pos=layout,
@@ -45,7 +44,7 @@ class NetworkPlot:
         plt.show()
 
 
-def graph_filtered_dist(df: pd.DataFrame, distrib: FreqDist, thresold: int, obj: str = 'tweet' ) -> networkx.Graph:
+def graph_filtered_dist(df: pd.DataFrame, distrib: FreqDist, thresold: int, obj: str = 'tweet') -> networkx.Graph:
     def check_thresold(word, distrib: FreqDist, value: int):
         return distrib.get(word) > value
     res = networkx.Graph()
