@@ -1,46 +1,75 @@
 import networkx
 import matplotlib.pyplot as plt
 import pandas as pd
+from nltk.probability import FreqDist
 
 
-class TextNetwork:
-    def __init__(self):
-        self.graph = networkx.Graph()
-        self.hashgraph = networkx.Graph()
+class NetworkPlot:
+    def __init__(self, graph: networkx.Graph, frequency_dist: FreqDist, label_thresold: int, color_thresold: int):
+        self.freq_dist = frequency_dist
+        self.graph = graph
+        self.label_thresold = label_thresold
+        self.color_thresold = color_thresold
 
-    def create_undirected_graph(self, df: pd.DataFrame) -> networkx.Graph:
-        for tweet in df['tweet_text']:
-            tmp = set(tweet)
-            for word in tmp:
-                for pair in tmp:
-                    if word != pair:
-                        if not self.graph.has_edge(word, pair):
-                            self.graph.add_edge(word, pair, count=1)
-                        else:
-                            self.graph[word][pair]['count'] += 1
-        return self.graph
+    def get_size(self, word: str) -> int:
+        return self.freq_dist.get(word)
 
-    def create_hashtag_graph(self, df: pd.DataFrame) -> networkx.Graph:
-        for tweet in df['hashtags']:
-            tmp = set(tweet)
-            for word in tmp:
-                for pair in tmp:
-                    if word != pair:
-                        if not self.hashgraph.has_edge(word, pair):
-                            self.hashgraph.add_edge(word, pair, count=1)
-                        else:
-                            self.hashgraph[word][pair]['count'] += 1
-        return self.hashgraph
+    def get_labels(self) -> dict:
+        labels={}
+        for node in self.graph.nodes():
+            if self.get_size(node) > self.label_thresold: labels[node] = node
+        return labels
+
+    def get_node_size(self):
+        return [self.get_size(i) for i in self.graph.nodes()]
+
+    def get_node_color(self):
+        return [['#1f78b4', 'lightblue'][self.get_size(node) > self.color_thresold] for node in self.graph.nodes()]
+
+    def plot(self):
+        plt.figure(3, figsize=(22, 22))
+        layout = networkx.spring_layout(self.graph)
+
+        networkx.draw(G=self.graph,
+                      pos=layout,
+                      cmap=plt.get_cmap('autumn'),
+                      node_size=self.get_node_size(),
+                      node_color=self.get_node_color()
+                      )
+
+        networkx.draw_networkx_labels(self.graph,
+                                      pos=layout,
+                                      labels=self.get_labels(),
+                                      font_size=25,
+                                      font_color='firebrick')
+        plt.show()
 
 
-def filter_by_min(graph, min: int) -> networkx.Graph:
+def graph_filtered_dist(df: pd.DataFrame, distrib: FreqDist, thresold: int, obj: str = 'tweet' ) -> networkx.Graph:
+    def check_thresold(word, distrib: FreqDist, value: int):
+        return distrib.get(word) > value
+    res = networkx.Graph()
+    bag = df['tweet_text'] if obj == 'tweet' else df['hashtags']
+    for tweet in bag:
+        if tweet:
+            for word in tweet:
+                if check_thresold(word=word, distrib=distrib, value=thresold):
+                    for pair in tweet:
+                        if word != pair:
+                            if not res.has_edge(word, pair):
+                                res.add_edge(word, pair, count=1)
+                            else:
+                                res[word][pair]['count'] += 1
+    return res
+
+def filter_pairwise_words(graph: networkx.Graph, thresold: int) -> networkx.Graph:
     res = []
     for (u, v, d) in graph.edges(data=True):
-        if d['count'] > min:
+        if d['count'] > thresold:
             res.append((u,v, dict(count=d['count'])))
     return networkx.Graph(res)
 
-def filter_by_top(graph, min: int) -> networkx.Graph:
+def filter_by_top(graph: networkx.Graph, min: int) -> networkx.Graph:
     res = set()
     for (u, v, d) in graph.graph.edges(data=True): res.add(d['count'])
     ls = list(res)
@@ -51,14 +80,5 @@ def filter_by_top(graph, min: int) -> networkx.Graph:
             res.append((u, v, dict(count=d['count'])))
     return networkx.Graph(res)
 
-def ego_word_network(self, word: str) -> dict:
-    return self.graph[word]
 
-def plot_all_network(graph, min: int):
-    graph = filter_by_min(graph, min)
-    dim = [1000]*len(graph.nodes())
-    plt.figure(3,figsize=(15,15))
-    pos=networkx.spring_layout(graph)
-    networkx.draw(graph, pos, cmap=plt.get_cmap('jet'),node_size=dim)
-    networkx.draw_networkx_labels(graph, pos)
-    plt.show()
+

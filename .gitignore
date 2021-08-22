@@ -3,4 +3,6 @@ keys.py
 *.json
 *.json5
 *.log
+*.csv
 __pycache__
+.ipynb_checkpoints
