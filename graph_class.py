@@ -54,11 +54,12 @@ def graph_filtered_dist(df: pd.DataFrame, distrib: FreqDist, thresold: int, obj:
             for word in tweet:
                 if check_thresold(word=word, distrib=distrib, value=thresold):
                     for pair in tweet:
-                        if word != pair:
-                            if not res.has_edge(word, pair):
-                                res.add_edge(word, pair, count=1)
-                            else:
-                                res[word][pair]['count'] += 1
+                        if check_thresold(word=pair, distrib=distrib, value=thresold):
+                            if word != pair:
+                                if not res.has_edge(word, pair):
+                                    res.add_edge(word, pair, count=1)
+                                else:
+                                    res[word][pair]['count'] += 1
     return res
 
 def filter_pairwise_words(graph: networkx.Graph, thresold: int) -> networkx.Graph:

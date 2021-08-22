@@ -6,6 +6,8 @@ from nltk.probability import FreqDist
 from nltk.stem.snowball import ItalianStemmer
 from nltk.tokenize import word_tokenize
 from sklearn.feature_extraction.text import TfidfVectorizer
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 class NltkTextProcessing:
@@ -13,15 +15,14 @@ class NltkTextProcessing:
         self.stemmer = ItalianStemmer(ignore_stopwords=True)
         self.stopwords = set(stopwords.words("italian"))
         self.increase_stopwords()
-        self.vectorizer = TfidfVectorizer(stop_words=self.stopwords)
 
     def preprocess_text(self, text) -> List:
         tokenized, res = word_tokenize(text=text, language='it'), list()
         for token in tokenized:
-            if token not in self.stopwords and not token.isdigit() and len(token) > 2:
+            if token not in self.stopwords and not token.isdigit() and len(token) > 2 and not token[0].isdigit():
                 if token == 'vaccini' or token == 'vaccinato' or token == 'vaccinati': token = 'vaccino'
                 res.append(token)
-        #token = [self.stemmer.stem(word) for word in token]
+        res = [self.stemmer.stem(word) for word in res]
         return res
 
     def process_df_text_column(self, df: pd.DataFrame, save: bool = False) -> pd.DataFrame:
@@ -67,13 +68,43 @@ class NltkTextProcessing:
                     'invece'}
         self.stopwords = self.stopwords.union(stopwords_)
 
-    def vectorized_dataframe(self, df: pd.DataFrame):
-        return self.vectorizer.fit_transform(df['tweet_text'])
+    def extract_external_url(self, df: pd.DataFrame) -> dict:
+        res = dict()
+        for url in df['external_url']:
+            if url and 'twitter' not in url:
+                slash_idx = url.find('/') + 2
+                idx = url.find(".")
+                if 'www' in url:
+                    sdx = url.find('.', idx + 1)
+                    web = url[slash_idx:sdx + 4]
+                else:
+                    second_slash = url.find('/', slash_idx) + 1
+                    web = url[slash_idx:second_slash]
+                if web != '':
+                    if web in res:
+                        res[web] += 1
+                    else: res[web] = 1
+        return res
 
+
+def count_barplot(count, thresold = 20):
+    word, freq = [], []
+    for key in count:
+        if count[key] > thresold:
+            word.append(key)
+            freq.append(count[key])
+    df = pd.DataFrame(freq, word).reset_index().\
+        rename(columns={'index': 'words', 0: 'freq'}).sort_values(by='freq', ascending=False)
+
+    fig = plt.figure(figsize=(20,20))
+    sns.barplot(y='words', x="freq", data=df)
+    plt.show()
 
 if __name__ == '__main__':
     with open('twitter.json', 'r') as file:
         tweet = pd.DataFrame(json.load(file))
     nlp = NltkTextProcessing()
+    from pprint import pprint
+    count_barplot(    nlp.extract_external_url(tweet))
 
 
