@@ -21,7 +21,7 @@ class NltkTextProcessing:
         tokenized, res = word_tokenize(text=text, language='it'), list()
         for token in tokenized:
             if token not in self.stopwords and not token.isdigit() and len(token) > 2 and not token[0].isdigit():
-                if not token.startswith('ah'):
+                if not token.startswith('ah') and 'juve' not in token and 'inter' not in token:
                     if token == 'vaccini' or token == 'vaccinato' or token == 'vaccinati': token = 'vaccino'
                     if token == 'falsi': token = 'falso'
                     res.append(token)
@@ -33,14 +33,28 @@ class NltkTextProcessing:
         if save: df.to_csv('tweets.csv')
         return df
 
-    def process_df_hash_column(self, df: pd.DataFrame, save: bool = False) -> pd.DataFrame:
+    def increase_stopwords(self) -> None:
+        stopwords_={'ce', 'fa', 'tanto', 'comunque', 'ecco', 'sempre', 'perche', 'va', 'co', 't', 'vuole',
+                    'dopo', 'https', 'poi', 'vedere', 'te', 'quest', 'do', 'no', 'pero', 'piu', 'quando',
+                    'adesso', 'ogni', 'so', 'essere', 'tutta', 'senza', 'fatto', 'essere', 'oggi', 'cazzi',
+                    'altri', 'ah', 'quindi', 'gran', 'solo', 'ora', 'grazie', 'cosa', 'gia', 'me', '-',
+                    'altro', 'nome', 'prima', 'anno', 'pure', 'qui', 'fate', 'sara', 'proprio', 'sa', 'de', 'fare',
+                    'nuova', 'molto', 'mette', 'dire', 'tali', 'puo', 'uso', 'cioe', 'alta', 'far', 'qualsiasi',
+                    'cosi', 'chiamano', 'capito', 'cazzo', 'raga', 'mai', 'avere', 'andare', 'invece', 'mesi', 'ancora',
+                    'invece', 'a0xlp74lne', 'a4otny4rhy', 'aaa', 'aacmgmzanzio', 'aanzibma3f', 'ajgsd0w7mx', 'parli',
+                    'vai','allegri'}
+        self.stopwords = self.stopwords.union(stopwords_)
+
+    @staticmethod
+    def process_df_hash_column(df: pd.DataFrame, save: bool = False) -> pd.DataFrame:
         def hash_process(hashes):
             if hashes: return [hashs.lower() for hashs in hashes]
         df['hashtags'] = df['hashtags'].apply(hash_process)
         if save: df.to_csv('tweets.csv')
         return df
 
-    def keep_unique(self, df: pd.DataFrame, save: bool = False) -> pd.DataFrame:
+    @staticmethod
+    def keep_unique(df: pd.DataFrame, save: bool = False) -> pd.DataFrame:
         check, res = set(), list()
         for (idx, row) in df.iterrows():
             if tuple(row.tweet_text) in check:
@@ -52,25 +66,14 @@ class NltkTextProcessing:
         if save: unique_df.to_csv('unique.csv')
         return unique_df
 
-    def frequency_dist(self, df: pd.DataFrame, obj: str = 'tweet') -> FreqDist:
+    @staticmethod
+    def frequency_dist(df: pd.DataFrame, obj: str = 'tweet') -> FreqDist:
         res = FreqDist()
         bag = df['tweet_text'] if obj == 'tweet' else df['hashtags']
         for text in bag:
             if text:
                 for word in text: res[word] += 1
         return res
-
-    def increase_stopwords(self) -> None:
-        stopwords_={'ce', 'fa', 'tanto', 'comunque', 'ecco', 'sempre', 'perche', 'va', 'co', 't', 'vuole',
-                    'dopo', 'https', 'poi', 'vedere', 'te', 'quest', 'do', 'no', 'pero', 'piu', 'quando',
-                    'adesso', 'ogni', 'so', 'essere', 'tutta', 'senza', 'fatto', 'essere', 'oggi', 'cazzi',
-                    'altri', 'ah', 'quindi', 'gran', 'solo', 'ora', 'grazie', 'cosa', 'gia', 'me', '-',
-                    'altro', 'nome', 'prima', 'anno', 'pure', 'qui', 'fate', 'sara', 'proprio', 'sa', 'de', 'fare',
-                    'nuova', 'molto', 'mette', 'dire', 'tali', 'puo', 'uso', 'cioe', 'alta', 'far', 'qualsiasi',
-                    'cosi', 'chiamano', 'capito', 'cazzo', 'raga', 'mai', 'avere', 'andare', 'invece', 'mesi', 'ancora',
-                    'invece', 'a0xlp74lne', 'a4otny4rhy', 'aaa', 'aacmgmzanzio', 'aanzibma3f', 'ajgsd0w7mx', 'parli',
-                    'vai'}
-        self.stopwords = self.stopwords.union(stopwords_)
 
     @staticmethod
     def extract_external_url(df: pd.DataFrame) -> dict:
@@ -104,6 +107,7 @@ class NltkTextProcessing:
             if afil: return df['tweet_text'].apply(filter_).values.tolist()
             else: return df['tweet_text'].apply(lambda x: ' '.join(x)).values.tolist()
         else: return df['hashtags'].apply(lambda x: ' '.join(x)).values.tolist()
+
 
 def count_barplot(count: dict, thresold: int = 20) -> None:
     fig = plt.figure(figsize=(20,20))

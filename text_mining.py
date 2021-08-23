@@ -4,6 +4,7 @@ from sklearn.decomposition import TruncatedSVD
 from sklearn.preprocessing import Normalizer
 from sklearn.pipeline import make_pipeline
 from sklearn.cluster import KMeans
+from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 from typing import Tuple
 import seaborn as sns
@@ -30,17 +31,28 @@ class TextMining:
 
     def plot_lda_topic(self, model: LatentDirichletAllocation, n_top_words: int) -> None:
         fig, axes = plt.subplots(1, 3, figsize=(23, 15))
-        sns.set_style('white')
+        features_names, i = self.tfid_vectorizer.get_feature_names(), 0
         fig.suptitle('Latent Dirichlet Allocation\n\n', fontsize=35)
-        i = 0
         for topic_idx, topic in enumerate(model.components_):
-            top_features_ind=topic.argsort()[:-n_top_words - 1:-1]
-            top_features=[self.tfid_vectorizer.get_feature_names()[i] for i in top_features_ind]
-            weights=topic[top_features_ind]
+            top_features_ind = topic.argsort()[:-n_top_words - 1:-1]
+            top_features = [features_names[i] for i in top_features_ind]
+            weights = topic[top_features_ind]
             sns.barplot(y=top_features, x=weights, ax=axes[i])
             axes[i].tick_params(axis='y', which='minor', labelsize=7)
             axes[i].set_title(f'Topic Number: {i+1}', fontsize=25)
+            sns.set_style('white')
             i += 1
+
+    def word_cloud_dict(self, model: LatentDirichletAllocation) -> dict:
+        features_names, tmp = self.tfid_vectorizer.get_feature_names(), {}
+        for topic_idx, topic in enumerate(model.components_):
+            tmp[topic_idx] = {}
+            top_features_ind = topic.argsort()[::-1]
+            top_features = [features_names[i] for i in top_features_ind]
+            weights = topic[top_features_ind]
+            for iel in range(len(weights)):
+                tmp[topic_idx][top_features[iel]] = int(weights[iel])
+        return tmp
 
     def clustering_kmeans(self, reduced_data: np.array, n_cluster:int = 3) -> KMeans:
         cluster_model = KMeans(n_clusters=n_cluster, init='k-means++', max_iter=100, n_init=1)
@@ -93,3 +105,26 @@ class TextMining:
         reducer.fit(data)
         return reducer.transform(data)
 
+    @staticmethod
+    def word_cloud_create_and_show(data, title):
+        fig=plt.figure(figsize=(20, 7))
+        wordcloud = WordCloud(margin=0, background_color='white', colormap='inferno',
+                              contour_width=10, contour_color='black', width=2000, height=1000)
+        word_clouded=wordcloud.generate_from_frequencies(data)
+        plt.imshow(word_clouded, interpolation='bilinear')
+        plt.title(f'{title}\n', fontdict=dict(size=20, style='italic'))
+        plt.axis("off")
+        plt.show()
+
+if __name__ == '__main__':
+    from nltk_class import *
+    with open('twitter.json', 'r') as file:
+        tweet=pd.DataFrame(json.load(file))
+    nlp=NltkTextProcessing()
+    tweet_df=nlp.process_df_text_column(tweet, save=False)
+    tweet_df=nlp.process_df_hash_column(tweet_df)
+    unique_df=nlp.keep_unique(tweet_df)
+    mining=TextMining()
+    text_to_vectorize=nlp.prepare_text_to_vectorize(unique_df, afil=True)  # tweet_df
+    vectorized_text=mining.vectorized_text(text_to_vectorize)
+    print(f'Shape of the Sparse matrix: {vectorized_text.shape}')
