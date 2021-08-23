@@ -20,9 +20,11 @@ class NltkTextProcessing:
         tokenized, res = word_tokenize(text=text, language='it'), list()
         for token in tokenized:
             if token not in self.stopwords and not token.isdigit() and len(token) > 2 and not token[0].isdigit():
-                if token == 'vaccini' or token == 'vaccinato' or token == 'vaccinati': token = 'vaccino'
-                res.append(token)
-        res = [self.stemmer.stem(word) for word in res]
+                if not token.startswith('ah'):
+                    if token == 'vaccini' or token == 'vaccinato' or token == 'vaccinati': token = 'vaccino'
+                    if token == 'falsi': token = 'falso'
+                    res.append(token)
+        # res = [self.stemmer.stem(word) for word in res]
         return res
 
     def process_df_text_column(self, df: pd.DataFrame, save: bool = False) -> pd.DataFrame:
@@ -65,7 +67,7 @@ class NltkTextProcessing:
                     'altro', 'nome', 'prima', 'anno', 'pure', 'qui', 'fate', 'sara', 'proprio', 'sa', 'de', 'fare',
                     'nuova', 'molto', 'mette', 'dire', 'tali', 'puo', 'uso', 'cioe', 'alta', 'far', 'qualsiasi',
                     'cosi', 'chiamano', 'capito', 'cazzo', 'raga', 'mai', 'avere', 'andare', 'invece', 'mesi', 'ancora',
-                    'invece'}
+                    'invece', 'a0xlp74lne', 'a4otny4rhy', 'aaa', 'aacmgmzanzio', 'aanzibma3f', 'ajgsd0w7mx'}
         self.stopwords = self.stopwords.union(stopwords_)
 
     def extract_external_url(self, df: pd.DataFrame) -> dict:
@@ -88,6 +90,7 @@ class NltkTextProcessing:
 
 
 def count_barplot(count, thresold = 20):
+    fig = plt.figure(figsize=(20,20))
     word, freq = [], []
     for key in count:
         if count[key] > thresold:
@@ -95,10 +98,16 @@ def count_barplot(count, thresold = 20):
             freq.append(count[key])
     df = pd.DataFrame(freq, word).reset_index().\
         rename(columns={'index': 'words', 0: 'freq'}).sort_values(by='freq', ascending=False)
-
-    fig = plt.figure(figsize=(20,20))
     sns.barplot(y='words', x="freq", data=df)
     plt.show()
+
+def update_parameter():
+    large, med = 22, 16
+    params={'axes.titlesize': large,'legend.fontsize': med,
+            'axes.labelsize': large, 'xtick.labelsize': large,
+            'ytick.labelsize': large, 'figure.titlesize': large}
+    plt.rcParams.update(params)
+    sns.set_style('whitegrid')
 
 if __name__ == '__main__':
     with open('twitter.json', 'r') as file:
