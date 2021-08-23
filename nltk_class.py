@@ -88,8 +88,15 @@ class NltkTextProcessing:
                     else: res[web] = 1
         return res
 
+    def prepare_text_to_vectorize(self, df: pd.DataFrame, filter: bool = False) -> list:
+        set_filter = {'nogreenpass','iononmivaccino'}
+        def filter_(txt):
+            tmp = ' '.join(txt)
+            for word in set_filter: tmp = tmp.replace(word, '')
+        if filter: return df['tweet_text'].apply(filter_).values.tolist()
+        else: return df['tweet_text'].apply(lambda x: ' '.join(x)).values.tolist()
 
-def count_barplot(count, thresold = 20):
+def count_barplot(count: dict, thresold: int = 20) -> None:
     fig = plt.figure(figsize=(20,20))
     word, freq = [], []
     for key in count:
@@ -101,10 +108,11 @@ def count_barplot(count, thresold = 20):
     sns.barplot(y='words', x="freq", data=df)
     plt.show()
 
-def update_parameter():
+def update_parameter() -> None:
     large, med = 22, 16
+    sns.set_style('white')
     params={'axes.titlesize': large,'legend.fontsize': med,
-            'axes.labelsize': large, 'xtick.labelsize': large,
+            'axes.labelsize': med, 'xtick.labelsize': large,
             'ytick.labelsize': large, 'figure.titlesize': large}
     plt.rcParams.update(params)
     sns.set_style('whitegrid')
@@ -115,5 +123,4 @@ if __name__ == '__main__':
     nlp = NltkTextProcessing()
     from pprint import pprint
     count_barplot(    nlp.extract_external_url(tweet))
-
 

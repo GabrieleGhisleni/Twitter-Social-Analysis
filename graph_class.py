@@ -43,42 +43,42 @@ class NetworkPlot:
                                       font_color='firebrick')
         plt.show()
 
+    @staticmethod
+    def graph_filtered_dist(df: pd.DataFrame, distrib: FreqDist, thresold: int, obj: str = 'tweet') -> networkx.Graph:
+        def check_thresold(word, distrib: FreqDist, value: int):
+            return distrib.get(word) > value
+        res = networkx.Graph()
+        bag = df['tweet_text'] if obj == 'tweet' else df['hashtags']
+        for tweet in bag:
+            if tweet:
+                for word in tweet:
+                    if check_thresold(word=word, distrib=distrib, value=thresold):
+                        for pair in tweet:
+                            if check_thresold(word=pair, distrib=distrib, value=thresold):
+                                if word != pair:
+                                    if not res.has_edge(word, pair):
+                                        res.add_edge(word, pair, count=1)
+                                    else:
+                                        res[word][pair]['count'] += 1
+        return res
 
-def graph_filtered_dist(df: pd.DataFrame, distrib: FreqDist, thresold: int, obj: str = 'tweet') -> networkx.Graph:
-    def check_thresold(word, distrib: FreqDist, value: int):
-        return distrib.get(word) > value
-    res = networkx.Graph()
-    bag = df['tweet_text'] if obj == 'tweet' else df['hashtags']
-    for tweet in bag:
-        if tweet:
-            for word in tweet:
-                if check_thresold(word=word, distrib=distrib, value=thresold):
-                    for pair in tweet:
-                        if check_thresold(word=pair, distrib=distrib, value=thresold):
-                            if word != pair:
-                                if not res.has_edge(word, pair):
-                                    res.add_edge(word, pair, count=1)
-                                else:
-                                    res[word][pair]['count'] += 1
-    return res
+    @staticmethod
+    def filter_pairwise_words(graph: networkx.Graph, thresold: int) -> networkx.Graph:
+        res = []
+        for (u, v, d) in graph.edges(data=True):
+            if d['count'] > thresold:
+                res.append((u,v, dict(count=d['count'])))
+        return networkx.Graph(res)
 
-def filter_pairwise_words(graph: networkx.Graph, thresold: int) -> networkx.Graph:
-    res = []
-    for (u, v, d) in graph.edges(data=True):
-        if d['count'] > thresold:
-            res.append((u,v, dict(count=d['count'])))
-    return networkx.Graph(res)
-
-def filter_by_top(graph: networkx.Graph, min: int) -> networkx.Graph:
-    res = set()
-    for (u, v, d) in graph.graph.edges(data=True): res.add(d['count'])
-    ls = list(res)
-    ls.sort()
-    res = []
-    for (u, v, d) in graph.graph.edges(data=True):
-        if d['count'] > ls[-min]:
-            res.append((u, v, dict(count=d['count'])))
-    return networkx.Graph(res)
-
-
+    @staticmethod
+    def filter_by_top(graph: networkx.Graph, min: int) -> networkx.Graph:
+        res = set()
+        for (u, v, d) in graph.graph.edges(data=True): res.add(d['count'])
+        ls = list(res)
+        ls.sort()
+        res = []
+        for (u, v, d) in graph.graph.edges(data=True):
+            if d['count'] > ls[-min]:
+                res.append((u, v, dict(count=d['count'])))
+        return networkx.Graph(res)
 
