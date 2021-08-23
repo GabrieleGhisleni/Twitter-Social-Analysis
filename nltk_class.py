@@ -1,13 +1,14 @@
-import json
-import pandas as pd
-from typing import List
-from nltk.corpus import stopwords
-from nltk.probability import FreqDist
+from sklearn.feature_extraction.text import TfidfVectorizer
 from nltk.stem.snowball import ItalianStemmer
 from nltk.tokenize import word_tokenize
-from sklearn.feature_extraction.text import TfidfVectorizer
+from nltk.probability import FreqDist
+from nltk.corpus import stopwords
 import matplotlib.pyplot as plt
+from typing import List
 import seaborn as sns
+import pandas as pd
+import json, re
+
 
 
 class NltkTextProcessing:
@@ -67,10 +68,12 @@ class NltkTextProcessing:
                     'altro', 'nome', 'prima', 'anno', 'pure', 'qui', 'fate', 'sara', 'proprio', 'sa', 'de', 'fare',
                     'nuova', 'molto', 'mette', 'dire', 'tali', 'puo', 'uso', 'cioe', 'alta', 'far', 'qualsiasi',
                     'cosi', 'chiamano', 'capito', 'cazzo', 'raga', 'mai', 'avere', 'andare', 'invece', 'mesi', 'ancora',
-                    'invece', 'a0xlp74lne', 'a4otny4rhy', 'aaa', 'aacmgmzanzio', 'aanzibma3f', 'ajgsd0w7mx'}
+                    'invece', 'a0xlp74lne', 'a4otny4rhy', 'aaa', 'aacmgmzanzio', 'aanzibma3f', 'ajgsd0w7mx', 'parli',
+                    'vai'}
         self.stopwords = self.stopwords.union(stopwords_)
 
-    def extract_external_url(self, df: pd.DataFrame) -> dict:
+    @staticmethod
+    def extract_external_url(df: pd.DataFrame) -> dict:
         res = dict()
         for url in df['external_url']:
             if url and 'twitter' not in url:
@@ -88,16 +91,23 @@ class NltkTextProcessing:
                     else: res[web] = 1
         return res
 
-    def prepare_text_to_vectorize(self, df: pd.DataFrame, filter: bool = False) -> list:
-        set_filter = {'nogreenpass','iononmivaccino'}
+    @staticmethod
+    def prepare_text_to_vectorize(df: pd.DataFrame, afil: bool = False, obj = 'tweet') -> list:
         def filter_(txt):
+            extra_filter={'nogreenpass', 'iononmivaccino'}
             tmp = ' '.join(txt)
-            for word in set_filter: tmp = tmp.replace(word, '')
-        if filter: return df['tweet_text'].apply(filter_).values.tolist()
-        else: return df['tweet_text'].apply(lambda x: ' '.join(x)).values.tolist()
+            for word in extra_filter:
+                tmp = tmp.replace(word, '')
+                tmp = tmp.replace('  ', ' ')
+            return tmp
+        if obj == 'tweet':
+            if afil: return df['tweet_text'].apply(filter_).values.tolist()
+            else: return df['tweet_text'].apply(lambda x: ' '.join(x)).values.tolist()
+        else: return df['hashtags'].apply(lambda x: ' '.join(x)).values.tolist()
 
 def count_barplot(count: dict, thresold: int = 20) -> None:
     fig = plt.figure(figsize=(20,20))
+    sns.set_style('white')
     word, freq = [], []
     for key in count:
         if count[key] > thresold:
@@ -106,6 +116,9 @@ def count_barplot(count: dict, thresold: int = 20) -> None:
     df = pd.DataFrame(freq, word).reset_index().\
         rename(columns={'index': 'words', 0: 'freq'}).sort_values(by='freq', ascending=False)
     sns.barplot(y='words', x="freq", data=df)
+    plt.title('Most Frequent External URL\n', fontsize=25)
+    plt.xlabel('')
+    plt.ylabel('')
     plt.show()
 
 def update_parameter() -> None:
