@@ -29,13 +29,14 @@ class TwitterStreamAPI(tweepy.StreamListener):
     def on_error(self, status_code):
             return True
 
+    @staticmethod
+    def get_api() -> tweepy.API:
+        auth = tweepy.OAuthHandler(os.getenv("CSS_KEY"), os.getenv("CSS_SECRET_KEY"))
+        auth.set_access_token(os.getenv("CSS_TOKEN"), os.getenv("CSS_SECRET_TOKEN"))
+        return tweepy.API(auth,
+                          wait_on_rate_limit=True,
+                          wait_on_rate_limit_notify=True)
 
-def get_api() -> tweepy.API:
-    auth = tweepy.OAuthHandler(os.getenv("CSS_KEY"), os.getenv("CSS_SECRET_KEY"))
-    auth.set_access_token(os.getenv("CSS_TOKEN"), os.getenv("CSS_SECRET_TOKEN"))
-    return tweepy.API(auth,
-                      wait_on_rate_limit=True,
-                      wait_on_rate_limit_notify=True)
 
 def log_loop(fun):
     while True:
@@ -57,7 +58,6 @@ def main():
          'terzadose', 'PassSanitaire','somministrazioneDiCortesia']
     myStream = tweepy.Stream(auth=get_api_aws().auth, listener=TwitterStreamAPI())
     myStream.filter(track=q, languages=['it'])
-
 
 if __name__ == '__main__':
     main()
