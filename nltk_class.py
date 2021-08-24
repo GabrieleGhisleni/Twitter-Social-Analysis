@@ -17,8 +17,10 @@ class NltkTextProcessing:
         self.stopwords = set(stopwords.words("italian"))
         self.increase_stopwords()
 
-    def preprocess_text(self, text, stem: bool = False) -> List:
+    def preprocess_text(self, text, stem: bool = False) -> List or None:
         tokenized, res = word_tokenize(text=text, language='it'), list()
+        if len(tokenized) < 4:
+            return None
         for token in tokenized:
             if token not in self.stopwords and not token.isdigit() and len(token) > 2 and not token[0].isdigit():
                 if not token.startswith('ah') and 'juve' not in token and 'inter' not in token and not token.startswith('tweet'):
@@ -30,8 +32,10 @@ class NltkTextProcessing:
         return res
 
     def process_df_text_column(self, df: pd.DataFrame, stem: bool, save: bool = False) -> pd.DataFrame:
-        df['tweet_text'] = df['tweet_text'].apply(self.preprocess_text, stem=stem)
-        if save: df.to_csv('tweets.csv')
+        df.loc[:, ['tweet_text']] = df['tweet_text'].apply(self.preprocess_text, stem=stem)
+        df = df[df['tweet_text'].notna()]
+        if save:
+            df.to_csv('tweets.csv')
         return df
 
     def unique_hashtags(self, df: pd.DataFrame):
@@ -48,7 +52,7 @@ class NltkTextProcessing:
                 if word in hashtag_set: s = s.replace(word, '')
             for iel in range(1,5): s = s.replace('  ' * iel, '')
             return s
-        df['tweet_text'] = df['tweet_text'].apply(remove)
+        df.loc[:, ['tweet_text']] = df['tweet_text'].apply(remove)
         return df
 
     def increase_stopwords(self) -> None:
@@ -60,14 +64,14 @@ class NltkTextProcessing:
                     'nuova', 'molto', 'mette', 'dire', 'tali', 'puo', 'uso', 'cioe', 'alta', 'far', 'qualsiasi',
                     'cosi', 'chiamano', 'capito', 'cazzo', 'raga', 'mai', 'avere', 'andare', 'invece', 'mesi', 'ancora',
                     'invece', 'a0xlp74lne', 'a4otny4rhy', 'aaa', 'aacmgmzanzio', 'aanzibma3f', 'ajgsd0w7mx', 'parli',
-                    'vai','allegri', 'qusta', 'qusto', 'anch', 'prch', 'com', 'snza', 'dir', 'qlli', 'no'}
+                    'vai','allegri', 'qusta', 'qusto', 'anch', 'prch', 'com', 'snza', 'dir', 'qlli', 'no', 'detto','dice'}
         self.stopwords = self.stopwords.union(stopwords_)
 
     @staticmethod
     def process_df_hash_column(df: pd.DataFrame, save: bool = False) -> pd.DataFrame:
         def hash_process(hashes):
             if hashes: return [hashs.lower() for hashs in hashes]
-        df['hashtags'] = df['hashtags'].apply(hash_process)
+        df.loc[:, ['hashtags']] = df['hashtags'].apply(hash_process)
         if save: df.to_csv('tweets.csv')
         return df
 

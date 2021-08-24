@@ -82,4 +82,10 @@ class NetworkPlot:
                 res.append((u, v, dict(count=d['count'])))
         return networkx.Graph(res)
 
+    @staticmethod
+    def keep_connected_components(graph: networkx.Graph, min_degree: int) -> None:
+        for component in list(networkx.connected_components(graph)):
+            if len(component) < min_degree:
+                for node in component:
+                    graph.remove_node(node)
 

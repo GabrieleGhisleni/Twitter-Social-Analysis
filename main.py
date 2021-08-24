@@ -14,6 +14,7 @@ if __name__ == '__main__':
 
     graph_tweet = net.graph_filtered_dist(tweet_unique_df, freq_distrib_tweet, 2)
     graph_tweet_filter = net.filter_pairwise_words(graph_tweet, 30)
+    net.keep_connected_components(graph_tweet_filter, min_degree=5)
 
     NetworkPlot(graph=graph_tweet_filter, frequency_dist=freq_distrib_tweet, label_thresold=100,
                 color_thresold=900).plot()

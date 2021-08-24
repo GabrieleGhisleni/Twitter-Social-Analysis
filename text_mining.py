@@ -30,16 +30,17 @@ class TextMining:
         return lda, self.tfid_vectorizer.get_feature_names()
 
     def plot_lda_topic(self, model: LatentDirichletAllocation, n_top_words: int) -> None:
-        fig, axes = plt.subplots(1, 3, figsize=(23, 15))
+        fig, axes = plt.subplots(3, 1, figsize=(20, 20))
         features_names, i = self.tfid_vectorizer.get_feature_names(), 0
-        fig.suptitle('Latent Dirichlet Allocation\n\n', fontsize=35)
+        fig.suptitle('Latent Dirichlet Allocation\n', fontsize=35)
         for topic_idx, topic in enumerate(model.components_):
             top_features_ind = topic.argsort()[:-n_top_words - 1:-1]
             top_features = [features_names[i] for i in top_features_ind]
             weights = topic[top_features_ind]
-            sns.barplot(y=top_features, x=weights, ax=axes[i])
+            sns.barplot(y=top_features, x=weights, ax=axes[i], palette='viridis')
             axes[i].tick_params(axis='y', which='minor', labelsize=7)
-            axes[i].set_title(f'Topic Number: {i+1}', fontsize=25)
+            axes[i].set_title(f'Topic Number {i+1}', fontsize=25)
+            axes[i].set_xticks([])
             sns.set_style('white')
             i += 1
 
@@ -116,15 +117,3 @@ class TextMining:
         plt.axis("off")
         plt.show()
 
-if __name__ == '__main__':
-    from nltk_class import *
-    with open('twitter.json', 'r') as file:
-        tweet=pd.DataFrame(json.load(file))
-    nlp=NltkTextProcessing()
-    tweet_df=nlp.process_df_text_column(tweet, save=False)
-    tweet_df=nlp.process_df_hash_column(tweet_df)
-    unique_df=nlp.keep_unique(tweet_df)
-    mining=TextMining()
-    text_to_vectorize=nlp.prepare_text_to_vectorize(unique_df, afil=True)  # tweet_df
-    vectorized_text=mining.vectorized_text(text_to_vectorize)
-    print(f'Shape of the Sparse matrix: {vectorized_text.shape}')
