@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 from typing import List
 import seaborn as sns
 import pandas as pd
+import numpy as np
 import json, re
-
 
 
 class NltkTextProcessing:
@@ -17,20 +17,38 @@ class NltkTextProcessing:
         self.stopwords = set(stopwords.words("italian"))
         self.increase_stopwords()
 
-    def preprocess_text(self, text) -> List:
+    def preprocess_text(self, text, stem: bool = False) -> List:
         tokenized, res = word_tokenize(text=text, language='it'), list()
         for token in tokenized:
             if token not in self.stopwords and not token.isdigit() and len(token) > 2 and not token[0].isdigit():
-                if not token.startswith('ah') and 'juve' not in token and 'inter' not in token:
+                if not token.startswith('ah') and 'juve' not in token and 'inter' not in token and not token.startswith('tweet'):
                     if token == 'vaccini' or token == 'vaccinato' or token == 'vaccinati': token = 'vaccino'
                     if token == 'falsi': token = 'falso'
+                    if token == 'grnpass': token = 'greenpass'
                     res.append(token)
-        # res = [self.stemmer.stem(word) for word in res]
+        if stem: res = [self.stemmer.stem(word) for word in res]
         return res
 
-    def process_df_text_column(self, df: pd.DataFrame, save: bool = False) -> pd.DataFrame:
-        df['tweet_text'] = df['tweet_text'].apply(self.preprocess_text)
+    def process_df_text_column(self, df: pd.DataFrame, stem: bool, save: bool = False) -> pd.DataFrame:
+        df['tweet_text'] = df['tweet_text'].apply(self.preprocess_text, stem=stem)
         if save: df.to_csv('tweets.csv')
+        return df
+
+    def unique_hashtags(self, df: pd.DataFrame):
+        wl=set()
+        for tweets in np.unique(df['hashtags'].dropna()):
+            for hashs in tweets:
+                if len(hashs) > 3: wl.add(hashs)
+        return wl
+
+    def remove_hashtag_from_text(self, df: pd.DataFrame):
+        hashtag_set = self.unique_hashtags(df)
+        def remove(s):
+            for word in s.split(' '):
+                if word in hashtag_set: s = s.replace(word, '')
+            for iel in range(1,5): s = s.replace('  ' * iel, '')
+            return s
+        df['tweet_text'] = df['tweet_text'].apply(remove)
         return df
 
     def increase_stopwords(self) -> None:
@@ -42,7 +60,7 @@ class NltkTextProcessing:
                     'nuova', 'molto', 'mette', 'dire', 'tali', 'puo', 'uso', 'cioe', 'alta', 'far', 'qualsiasi',
                     'cosi', 'chiamano', 'capito', 'cazzo', 'raga', 'mai', 'avere', 'andare', 'invece', 'mesi', 'ancora',
                     'invece', 'a0xlp74lne', 'a4otny4rhy', 'aaa', 'aacmgmzanzio', 'aanzibma3f', 'ajgsd0w7mx', 'parli',
-                    'vai','allegri'}
+                    'vai','allegri', 'qusta', 'qusto', 'anch', 'prch', 'com', 'snza', 'dir', 'qlli', 'no'}
         self.stopwords = self.stopwords.union(stopwords_)
 
     @staticmethod
@@ -133,11 +151,4 @@ def update_parameter() -> None:
             'ytick.labelsize': large, 'figure.titlesize': large}
     plt.rcParams.update(params)
     sns.set_style('whitegrid')
-
-if __name__ == '__main__':
-    with open('twitter.json', 'r') as file:
-        tweet = pd.DataFrame(json.load(file))
-    nlp = NltkTextProcessing()
-    from pprint import pprint
-    count_barplot(    nlp.extract_external_url(tweet))
 

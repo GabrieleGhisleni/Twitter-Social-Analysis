@@ -82,3 +82,4 @@ class NetworkPlot:
                 res.append((u, v, dict(count=d['count'])))
         return networkx.Graph(res)
 
+
