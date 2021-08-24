@@ -58,8 +58,8 @@ class NltkTextProcessing:
     def increase_stopwords(self) -> None:
         stopwords_={'ce', 'fa', 'tanto', 'comunque', 'ecco', 'sempre', 'perche', 'va', 'co', 't', 'vuole',
                     'dopo', 'https', 'poi', 'vedere', 'te', 'quest', 'do', 'no', 'pero', 'piu', 'quando',
-                    'adesso', 'ogni', 'so', 'essere', 'tutta', 'senza', 'fatto', 'essere', 'oggi', 'cazzi',
-                    'altri', 'ah', 'quindi', 'gran', 'solo', 'ora', 'grazie', 'cosa', 'gia', 'me', '-',
+                    'adesso', 'ogni', 'so', 'essere', 'tutta', 'senza', 'fatto', 'essere', 'oggi', 'cazzi', 'posso',
+                    'altri', 'ah', 'quindi', 'gran', 'solo', 'ora', 'grazie', 'cosa', 'gia', 'me', '-', 'puoi',
                     'altro', 'nome', 'prima', 'anno', 'pure', 'qui', 'fate', 'sara', 'proprio', 'sa', 'de', 'fare',
                     'nuova', 'molto', 'mette', 'dire', 'tali', 'puo', 'uso', 'cioe', 'alta', 'far', 'qualsiasi',
                     'cosi', 'chiamano', 'capito', 'cazzo', 'raga', 'mai', 'avere', 'andare', 'invece', 'mesi', 'ancora',
@@ -132,7 +132,7 @@ class NltkTextProcessing:
 
 
 def count_barplot(count: dict, thresold: int = 20) -> None:
-    fig = plt.figure(figsize=(20,20))
+    fig = plt.figure(figsize=(20,15))
     sns.set_style('white')
     word, freq = [], []
     for key in count:
@@ -141,8 +141,8 @@ def count_barplot(count: dict, thresold: int = 20) -> None:
             freq.append(count[key])
     df = pd.DataFrame(freq, word).reset_index().\
         rename(columns={'index': 'words', 0: 'freq'}).sort_values(by='freq', ascending=False)
-    sns.barplot(y='words', x="freq", data=df)
-    plt.title('Most Frequent External URL\n', fontsize=25)
+    sns.barplot(y='words', x="freq", data=df, palette='viridis')
+    plt.title('Most Frequent External URL\n\n', fontsize=35)
     plt.xlabel('')
     plt.ylabel('')
     plt.show()

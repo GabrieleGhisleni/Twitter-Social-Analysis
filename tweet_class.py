@@ -41,9 +41,9 @@ class Tweet:
                     media_text=self.media_text)
 
     @staticmethod
-    def from_api_to_class(status: tweepy.api.API) -> Tweet:
+    def from_api_to_class(status: tweepy.api.API, first_clean: bool = False) -> Tweet:
         is_a_reply, hashtags = False, None
-        text = extended_tweet(status._json)
+        text = extended_tweet(status._json, first_clean=first_clean)
         media_text = check_and_extract_image_text(status)
         external_url = find_external_url(status._json)
         if status.in_reply_to_status_id or status.in_reply_to_user_id: is_a_reply = True
@@ -97,7 +97,8 @@ def check_and_extract_image_text(tweet: tweepy.api.API) -> str or None:
     return media_text
 
 
-def extended_tweet(tweet: dict) -> str:
+def extended_tweet(tweet: dict, first_clean: bool = False) -> str:
+    text = ''
     if 'extended_tweet' in tweet:
         text = tweet['extended_tweet']['full_text']
     elif 'retweeted_status' in tweet:
@@ -106,7 +107,8 @@ def extended_tweet(tweet: dict) -> str:
         elif 'text' in tweet['retweeted_status']:
             text = tweet['retweeted_status']['text']
     else: text = tweet['text']
-    return text_first_clean(text)
+    if first_clean: return text_first_clean(text)
+    else: return text
 
 
 def text_first_clean(text: str) -> str:

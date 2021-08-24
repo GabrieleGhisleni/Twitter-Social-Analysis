@@ -32,14 +32,14 @@ class TextMining:
     def plot_lda_topic(self, model: LatentDirichletAllocation, n_top_words: int) -> None:
         fig, axes = plt.subplots(3, 1, figsize=(20, 20))
         features_names, i = self.tfid_vectorizer.get_feature_names(), 0
-        fig.suptitle('Latent Dirichlet Allocation\n', fontsize=35)
+        fig.suptitle('Latent Dirichlet Allocation', fontsize=35)
         for topic_idx, topic in enumerate(model.components_):
             top_features_ind = topic.argsort()[:-n_top_words - 1:-1]
             top_features = [features_names[i] for i in top_features_ind]
             weights = topic[top_features_ind]
             sns.barplot(y=top_features, x=weights, ax=axes[i], palette='viridis')
             axes[i].tick_params(axis='y', which='minor', labelsize=7)
-            axes[i].set_title(f'Topic Number {i+1}', fontsize=25)
+            axes[i].set_title(f'Words that characterize the topic number {i+1}', fontsize=25)
             axes[i].set_xticks([])
             sns.set_style('white')
             i += 1
