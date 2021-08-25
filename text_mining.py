@@ -29,8 +29,12 @@ class TextMining:
         lda.fit(encoded)
         return lda, self.tfid_vectorizer.get_feature_names()
 
-    def plot_lda_topic(self, model: LatentDirichletAllocation, n_top_words: int) -> None:
-        fig, axes = plt.subplots(3, 1, figsize=(20, 20))
+    def plot_lda_topic(self, model: LatentDirichletAllocation, topics: int, n_top_words: int) -> None:
+        if topics < 10: height = 20
+        elif topics < 20: height = 35
+        elif topics < 30: height = 55
+        else: height = 65
+        fig, axes = plt.subplots(topics, 1, figsize=(20, height))
         features_names, i = self.tfid_vectorizer.get_feature_names(), 0
         fig.suptitle('Latent Dirichlet Allocation', fontsize=35)
         for topic_idx, topic in enumerate(model.components_):
@@ -43,6 +47,8 @@ class TextMining:
             axes[i].set_xticks([])
             sns.set_style('white')
             i += 1
+        fig.tight_layout()
+        plt.show()
 
     def word_cloud_dict(self, model: LatentDirichletAllocation) -> dict:
         features_names, tmp = self.tfid_vectorizer.get_feature_names(), {}
@@ -73,6 +79,7 @@ class TextMining:
         plot_single(data[1], n_cluster, axes[0][1], k=k[1])
         plot_single(data[2], n_cluster, axes[1][0], k=k[2])
         plot_single(data[3], n_cluster, axes[1][1], k=k[3])
+        fig.tight_layout()
         plt.show()
 
     @staticmethod
@@ -95,6 +102,7 @@ class TextMining:
         sns.scatterplot(ax=axes[0], data=svd_df, x='Component 1', y='Component 2', hue='cluster', palette='viridis')
         sns.scatterplot(ax=axes[1], data=svd_df, x='Component 1', y='Component 3', hue='cluster', palette='viridis')
         sns.scatterplot(ax=axes[2], data=svd_df, x='Component 2', y='Component 3', hue='cluster', palette='viridis')
+        fig.tight_layout()
         plt.show()
 
     @staticmethod

@@ -5,6 +5,7 @@ from nltk.probability import FreqDist
 from nltk.corpus import stopwords
 import matplotlib.pyplot as plt
 from typing import List
+import geopandas as gpd
 import seaborn as sns
 import pandas as pd
 import numpy as np
@@ -66,8 +67,74 @@ class NltkTextProcessing:
                     'invece', 'a0xlp74lne', 'a4otny4rhy', 'aaa', 'aacmgmzanzio', 'aanzibma3f', 'ajgsd0w7mx', 'parli',
                     'vai','allegri', 'qusta', 'qusto', 'anch', 'prch', 'com', 'snza', 'dir', 'qlli', 'no', 'detto','dice',
                     'qualcuno','qualche','suggerito', 'quali', 'ieri','oggi', 'ile','cio','altra','via','ilpass','delpass',
-                    'quasi','die','andra','alle'}
+                    'quasi','die','andra','alle','https'}
         self.stopwords = self.stopwords.union(stopwords_)
+
+    def get_location(self, df: pd.DataFrame) -> pd.DataFrame:
+        with open('citta.json', 'r') as file:
+            location = json.load(file)
+        region = inv_map = set(location.values())
+        punct = ['-','_','/',',','.','!','?']
+        flag,res = True, list()
+        for row in df.author_loc.dropna():
+            for p in punct:
+                tmp = row.replace(p, ' ')
+            for word in tmp.split(' '):
+                if word in location:
+                    res.append(location[word])
+                    flag = False
+            if flag:
+                for word in tmp.split(' '):
+                    if word in region:
+                        res.append(word)
+            flag = True
+        name, count = np.unique(res, return_counts=True)
+        loc = dict(zip(name, count))
+        loc = pd.DataFrame(loc, index=[0]).T.reset_index().rename(columns={'index': 'reg_name', 0: 'value'})
+        loc.loc[loc.reg_name == 'Trentino-Alto Adige/S�dtirol', ['reg_name']] = 'Trentino-Alto Adige'
+        return loc
+
+    def get_dates(self, df: pd.DataFrame) -> dict:
+        date, value = np.unique(df.created_at.apply(lambda x: x[5:10]).tolist(), return_counts=True)
+        res = dict(zip(date, value))
+        return pd.DataFrame(res, index=[0]).T.reset_index().rename(columns={'index':'date',0:'value'})
+
+    def get_followers(self, df: pd.DataFrame) -> list:
+        x = sorted(df.author_followers.loc[df.author_followers > 1].tolist())
+        x.reverse()
+        return x
+
+    def process_location(self, loc: pd.DataFrame) -> pd.DataFrame:
+        italy_path="https://raw.githubusercontent.com/openpolis/geojson-italy/master/geojson/limits_IT_regions.geojson"
+        italy=gpd.read_file(italy_path)
+        italy.loc[italy.reg_name == 'Trentino-Alto Adige/Südtirol', ["reg_name"]] = 'Trentino-Alto Adige'
+        return pd.merge(italy, loc, on='reg_name')
+
+    def plot_dates_location_followers(self, df: pd.DataFrame) -> None:
+        fig, axes=plt.subplots(1, 3, figsize=(20, 7))
+        dates = self.get_dates(df)
+        follower = self.get_followers(df)
+        location = self.get_location(df)
+        regions_df = self.process_location(location)
+        sns.barplot(ax=axes[0], data=dates, y='date', x='value', palette='viridis')
+        sns.lineplot(ax=axes[2], y=follower, x=[iel for iel in range(len(follower))])
+        regions_df.plot(ax=axes[1],
+                    column='value',
+                    linewidth=0.1,
+                    scheme='NaturalBreaks',
+                    k=5,
+                    legend=True,
+                    markersize=45,
+                    legend_kwds=dict(fmt='{:.0f}', frameon=False, loc='best'))
+
+        axes[2].set_ylabel('Followers')
+        axes[2].set_xticks([])
+        axes[0].tick_params(labelrotation=0)
+        axes[0].set_xlabel('')
+        axes[1].set_xticks([])
+        axes[1].set_yticks([])
+        fig.tight_layout()
+        plt.show()
 
     @staticmethod
     def process_df_hash_column(df: pd.DataFrame, save: bool = False) -> pd.DataFrame:
@@ -133,21 +200,9 @@ class NltkTextProcessing:
         else: return df['hashtags'].apply(lambda x: ' '.join(x)).values.tolist()
 
 
-def count_barplot(count: dict, thresold: int = 20) -> None:
-    fig = plt.figure(figsize=(20,15))
-    sns.set_style('white')
-    word, freq = [], []
-    for key in count:
-        if count[key] > thresold:
-            word.append(key)
-            freq.append(count[key])
-    df = pd.DataFrame(freq, word).reset_index().\
-        rename(columns={'index': 'words', 0: 'freq'}).sort_values(by='freq', ascending=False)
-    sns.barplot(y='words', x="freq", data=df, palette='viridis')
-    plt.title('Most Frequent External URL\n\n', fontsize=35)
-    plt.xlabel('')
-    plt.ylabel('')
-    plt.show()
+
+
+
 
 def update_parameter() -> None:
     large, med = 22, 16

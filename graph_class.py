@@ -2,8 +2,10 @@ from sklearn.cluster import SpectralClustering
 from nltk.probability import FreqDist
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
+import seaborn as sns
 import pandas as pd
 import numpy as np
+import operator
 import networkx
 
 
@@ -117,3 +119,37 @@ class NetworkPlot:
         spectral_clustering.fit(adj_matrix)
         return spectral_clustering.labels_
 
+    @staticmethod
+    def plot_centrality(levels_of_centrality: list):
+        names = ["Degree Centrality", "Degree Betwenness"]
+        fig, axes = plt.subplots(2,1, figsize=(12, 10))
+        for iel in range(len(levels_of_centrality)):
+            if iel == 0: to = 65
+            else: to = 30
+            tmp = dict(sorted(levels_of_centrality[iel].items(), key = operator.itemgetter(1), reverse=True)[:to])
+            df = pd.DataFrame(tmp, index = [0]).T.reset_index()
+            sns.barplot(data=df, x='index', y=0, palette='viridis', ax = axes[iel])
+            axes[iel].tick_params(labelrotation=90)
+            axes[iel].set_title(names[iel], fontsize=25)
+            axes[iel].set_xlabel('')
+            axes[iel].set_ylabel('')
+            axes[iel].set_yticks([])
+        fig.tight_layout()
+        plt.show()
+
+    @staticmethod
+    def count_barplot(count: dict, thresold: int = 20) -> None:
+        fig=plt.figure(figsize=(20, 15))
+        sns.set_style('white')
+        word, freq=[], []
+        for key in count:
+            if count[key] > thresold:
+                word.append(key)
+                freq.append(count[key])
+        df=pd.DataFrame(freq, word).reset_index(). \
+            rename(columns={'index': 'words', 0: 'freq'}).sort_values(by='freq', ascending=False)
+        sns.barplot(y='words', x="freq", data=df, palette='viridis')
+        plt.title('Most Frequent External URL\n\n', fontsize=35)
+        plt.xlabel('')
+        plt.ylabel('')
+        plt.show()

@@ -1,8 +1,14 @@
-keys.py
+# Folders
 .idea
+file_backup
+__pycache__
+.ipynb_checkpoints
+
+# Files
 *.json
 *.json5
 *.log
 *.csv
-__pycache__
-.ipynb_checkpoints
+
+#Scripts
+keys.py
