@@ -64,7 +64,9 @@ class NltkTextProcessing:
                     'nuova', 'molto', 'mette', 'dire', 'tali', 'puo', 'uso', 'cioe', 'alta', 'far', 'qualsiasi',
                     'cosi', 'chiamano', 'capito', 'cazzo', 'raga', 'mai', 'avere', 'andare', 'invece', 'mesi', 'ancora',
                     'invece', 'a0xlp74lne', 'a4otny4rhy', 'aaa', 'aacmgmzanzio', 'aanzibma3f', 'ajgsd0w7mx', 'parli',
-                    'vai','allegri', 'qusta', 'qusto', 'anch', 'prch', 'com', 'snza', 'dir', 'qlli', 'no', 'detto','dice'}
+                    'vai','allegri', 'qusta', 'qusto', 'anch', 'prch', 'com', 'snza', 'dir', 'qlli', 'no', 'detto','dice',
+                    'qualcuno','qualche','suggerito', 'quali', 'ieri','oggi', 'ile','cio','altra','via','ilpass','delpass',
+                    'quasi','die','andra','alle'}
         self.stopwords = self.stopwords.union(stopwords_)
 
     @staticmethod

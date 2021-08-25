@@ -1,15 +1,21 @@
-import networkx
+from sklearn.cluster import SpectralClustering
+from nltk.probability import FreqDist
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import pandas as pd
-from nltk.probability import FreqDist
+import numpy as np
+import networkx
+
 
 
 class NetworkPlot:
-    def __init__(self, graph: networkx.Graph, frequency_dist: FreqDist, label_thresold: int, color_thresold: int):
+    def __init__(self, graph: networkx.Graph, frequency_dist: FreqDist, label_thresold: int, color_thresold: int = None, labels: list = None):
         self.freq_dist = frequency_dist
         self.graph = graph
         self.label_thresold = label_thresold
         self.color_thresold = color_thresold
+        self.labels = labels
+        self.colors = list(mcolors.TABLEAU_COLORS.values())
 
     def get_size(self, word: str) -> int:
         return self.freq_dist.get(word)
@@ -23,8 +29,23 @@ class NetworkPlot:
     def get_node_size(self):
         return [self.get_size(i) for i in self.graph.nodes()]
 
-    def get_node_color(self):
+    def get_node_thresold_color(self):
         return [['#1f78b4', 'lightblue'][self.get_size(node) > self.color_thresold] for node in self.graph.nodes()]
+
+    def get_node_color_clustering(self, rnd: bool = False, colors: list = False):
+        res, tmp = [],{}
+        if rnd:
+            for i in np.unique(self.labels):
+                tmp[i] = self.colors[np.random.randint(0, len(self.colors))]
+            for i in self.labels:
+                res.append(tmp[i])
+        elif colors:
+            for i in self.labels:
+                res.append(colors[i])
+        else:
+            for i in self.labels:
+                res.append(self.colors[i])
+        return res
 
     def plot(self):
         plt.figure(3, figsize=(22, 22))
@@ -34,7 +55,7 @@ class NetworkPlot:
                       pos=layout,
                       cmap=plt.get_cmap('autumn'),
                       node_size=self.get_node_size(),
-                      node_color=self.get_node_color())
+                      node_color=self.get_node_thresold_color() if self.color_thresold else self.get_node_color_clustering())
 
         networkx.draw_networkx_labels(self.graph,
                                       pos=layout,
@@ -88,4 +109,11 @@ class NetworkPlot:
             if len(component) < min_degree:
                 for node in component:
                     graph.remove_node(node)
+
+    @staticmethod
+    def spectral_clustering(graph: networkx.Graph, n_cluster: int) -> list:
+        adj_matrix  = networkx.to_numpy_matrix(graph)
+        spectral_clustering = SpectralClustering(n_cluster, affinity='precomputed', n_init=100, assign_labels='discretize')
+        spectral_clustering.fit(adj_matrix)
+        return spectral_clustering.labels_
 
