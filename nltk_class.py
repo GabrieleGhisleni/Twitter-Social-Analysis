@@ -18,17 +18,18 @@ class NltkTextProcessing:
         self.stopwords = set(stopwords.words("italian"))
         self.increase_stopwords()
 
-    def preprocess_text(self, text, stem: bool = False) -> List or None:
+    def preprocess_text(self, text, stem: bool = False, min_len: int = 5) -> List or None:
         tokenized, res = word_tokenize(text=text, language='it'), list()
-        if len(tokenized) < 4:
+        if len(tokenized) < min_len:
             return None
         for token in tokenized:
             if token not in self.stopwords and not token.isdigit() and len(token) > 2 and not token[0].isdigit():
-                if not token.startswith('ah') and 'juve' not in token and 'inter' not in token and not token.startswith('tweet'):
-                    if token == 'vaccini' or token == 'vaccinato' or token == 'vaccinati': token = 'vaccino'
-                    if token == 'falsi': token = 'falso'
-                    if token == 'grnpass': token = 'greenpass'
-                    res.append(token)
+                if not token.startswith('ah') and 'juve' not in token and 'inter' not in token and not token.startswith('tw'):
+                    if not token.startswith('gx3'):
+                        if token == 'vaccini' or token == 'vaccinato' or token == 'vaccinati': token = 'vaccino'
+                        if token == 'falsi': token = 'falso'
+                        if token == 'grnpass': token = 'greenpass'
+                        res.append(token)
         if stem: res = [self.stemmer.stem(word) for word in res]
         return res
 

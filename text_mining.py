@@ -15,7 +15,7 @@ import umap
 
 class TextMining:
     def __init__(self, ngram_range: int = 1):
-        self.tfid_vectorizer = TfidfVectorizer(ngram_range=(1, ngram_range), norm='l2')
+        self.tfid_vectorizer = TfidfVectorizer(ngram_range=(1, ngram_range), norm='l2', max_df = 0.999, min_df = 1)
         self.count_vectorizer = CountVectorizer()
 
     def vectorized_text(self, text_to_vectorize: list):
@@ -36,14 +36,13 @@ class TextMining:
         else: height = 65
         fig, axes = plt.subplots(topics, 1, figsize=(20, height))
         features_names, i = self.tfid_vectorizer.get_feature_names(), 0
-        fig.suptitle('Latent Dirichlet Allocation', fontsize=35)
         for topic_idx, topic in enumerate(model.components_):
             top_features_ind = topic.argsort()[:-n_top_words - 1:-1]
             top_features = [features_names[i] for i in top_features_ind]
             weights = topic[top_features_ind]
             sns.barplot(y=top_features, x=weights, ax=axes[i], palette='viridis')
             axes[i].tick_params(axis='y', which='minor', labelsize=7)
-            axes[i].set_title(f'Words that characterize the topic number {i+1}', fontsize=25)
+            axes[i].set_title(f'Topic {i} characterizing words', fontsize=20)
             axes[i].set_xticks([])
             sns.set_style('white')
             i += 1
@@ -62,7 +61,7 @@ class TextMining:
         return tmp
 
     def clustering_kmeans(self, reduced_data: np.array, n_cluster:int = 3) -> KMeans:
-        cluster_model = KMeans(n_clusters=n_cluster, init='k-means++', max_iter=100, n_init=1)
+        cluster_model = KMeans(n_clusters=n_cluster, init='k-means++', max_iter=100, n_init=15)
         cluster_model.fit(reduced_data)
         return cluster_model
 
@@ -82,14 +81,37 @@ class TextMining:
         fig.tight_layout()
         plt.show()
 
+    def get_wordcloud_lsa(self, svd_model, topics) -> list:
+        svd_df = pd.DataFrame(svd_model.components_, columns=(self.tfid_vectorizer.get_feature_names())).T
+        res = []
+        for i in range(topics):
+            d = {}
+            tmp = svd_df.loc[(svd_df[i] > 0.001), [i]][0:250].reset_index().sort_values(by=i, ascending=False)
+            tmp[i] = tmp[i].apply(lambda x: x * 100)
+            for a, x in tmp.values: d[a]=x
+            res.append(d)
+        return res
+
+    def plot_lsa_topic(self, svd_model, topics, top_word):
+        fig, axes=plt.subplots(topics, 1, figsize=(20, 20))
+        svd_df=pd.DataFrame(svd_model.components_, columns=(self.tfid_vectorizer.get_feature_names())).T
+        for i in range(topics):
+            tmp = svd_df.loc[(svd_df[i] > 0.1), [i]][0:top_word].reset_index().sort_values(by=i, ascending=False)
+            sns.barplot(data=tmp, y='index', x=i, palette='viridis', ax=axes[i])
+            axes[i].set_title(f'Topic {i} characterizing words', fontsize=20)
+            axes[i].set_ylabel('')
+            axes[i].set_xlabel('')
+        fig.tight_layout()
+        plt.show()
+
     @staticmethod
-    def latent_semantic_analysis(encoded, components: int) -> np.array:
+    def latent_semantic_analysis(encoded, components: int) -> Tuple[TruncatedSVD,np.array]:
         svd = TruncatedSVD(n_components=components, n_iter=10)
         normalizer = Normalizer(norm='l2', copy=False)
         lsa = make_pipeline(svd, normalizer)
         svd_result = lsa.fit_transform(encoded)
         print(f"Explained variance of the SVD step: {svd.explained_variance_ratio_.sum()}%")
-        return svd_result
+        return svd, svd_result
 
     @staticmethod
     def plot_lsa(svd_result: np.array, kmeans_model: KMeans, n_components: int) -> None:
@@ -99,9 +121,9 @@ class TextMining:
         axes[0].set_title('Latent Semantic Analisys 1-2\n', fontsize=25)
         axes[1].set_title('Latent Semantic Analisys 1-3\n', fontsize=25)
         axes[2].set_title('Latent Semantic Analisys 2-3\n', fontsize=25)
-        sns.scatterplot(ax=axes[0], data=svd_df, x='Component 1', y='Component 2', hue='cluster', palette='viridis')
-        sns.scatterplot(ax=axes[1], data=svd_df, x='Component 1', y='Component 3', hue='cluster', palette='viridis')
-        sns.scatterplot(ax=axes[2], data=svd_df, x='Component 2', y='Component 3', hue='cluster', palette='viridis')
+        sns.scatterplot(ax=axes[0], data=svd_df, x='Component 1', y='Component 2', hue='cluster', palette='tab10')
+        sns.scatterplot(ax=axes[1], data=svd_df, x='Component 1', y='Component 3', hue='cluster', palette='tab10')
+        sns.scatterplot(ax=axes[2], data=svd_df, x='Component 2', y='Component 3', hue='cluster', palette='tab10')
         fig.tight_layout()
         plt.show()
 
@@ -115,13 +137,26 @@ class TextMining:
         return reducer.transform(data)
 
     @staticmethod
-    def word_cloud_create_and_show(data, title):
-        fig=plt.figure(figsize=(20, 7))
-        wordcloud = WordCloud(margin=0, background_color='white', colormap='inferno',
-                              contour_width=10, contour_color='black', width=2000, height=1000)
-        word_clouded=wordcloud.generate_from_frequencies(data)
-        plt.imshow(word_clouded, interpolation='bilinear')
-        plt.title(f'{title}\n', fontdict=dict(size=20, style='italic'))
-        plt.axis("off")
+    def plot_wordcloud(data, n_topics):
+        if n_topics == 4: fig, axes=plt.subplots(2, 2, figsize=(20, 14))
+        elif n_topics == 6: fig, axes=plt.subplots(3, 2, figsize=(20, 16))
+        else: fig, axes=plt.subplots(4, 2, figsize=(20, 18))
+        wordcloud=WordCloud(margin=10, background_color='white', colormap='inferno', width=640, height=400,
+                            max_words=150)
+        for iel in range(n_topics):
+            if iel == 0: ax, ax1 = 0, 0
+            elif iel == 1: ax, ax1 = 0, 1
+            elif iel == 2: ax, ax1 = 1, 0
+            elif iel == 3: ax, ax1 = 1, 1
+            elif iel == 4: ax, ax1 = 2, 0
+            elif iel == 5: ax, ax1 = 2, 1
+            elif iel == 6: ax, ax1 = 3, 0
+            elif iel == 7: ax, ax1 = 3, 1
+            word_clouded=wordcloud.generate_from_frequencies(data[iel])
+            axes[ax][ax1].set_xticks([])
+            axes[ax][ax1].set_yticks([])
+            axes[ax][ax1].set_title(f'Topic {iel+1} characterizing words', fontsize=25)
+            axes[ax][ax1].imshow(word_clouded)
+        fig.tight_layout()
         plt.show()
 
