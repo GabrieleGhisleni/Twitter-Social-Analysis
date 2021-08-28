@@ -3,6 +3,7 @@
 file_backup
 __pycache__
 .ipynb_checkpoints
+photos
 
 # Files
 *.json

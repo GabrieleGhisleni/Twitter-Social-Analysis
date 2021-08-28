@@ -3,9 +3,11 @@ from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.decomposition import TruncatedSVD
 from sklearn.preprocessing import Normalizer
 from sklearn.pipeline import make_pipeline
+from nltk.tokenize import word_tokenize
 from sklearn.cluster import KMeans
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
+from matplotlib import cm
 from typing import Tuple
 import seaborn as sns
 import pandas as pd
@@ -19,15 +21,20 @@ class TextMining:
         self.count_vectorizer = CountVectorizer()
 
     def vectorized_text(self, text_to_vectorize: list):
-        return self.tfid_vectorizer.fit_transform(text_to_vectorize)
+        res = self.tfid_vectorizer.fit_transform(text_to_vectorize)
+        print(f'Shape of the Sparse Matrix {res.shape}, type: {type(res)}')
+        return res
 
-    def lda_topic_modeling(self, encoded, topics: int) -> Tuple[LatentDirichletAllocation, list]:
+    def get_features_names(self):
+        return self.tfid_vectorizer.get_feature_names()
+
+    def lda_topic_modeling(self, encoded, topics: int) -> LatentDirichletAllocation:
         lda = LatentDirichletAllocation(n_components=topics, max_iter=5,
                                           learning_method='online',
                                           learning_offset=50.,
                                           random_state=42)
         lda.fit(encoded)
-        return lda, self.tfid_vectorizer.get_feature_names()
+        return lda
 
     def plot_lda_topic(self, model: LatentDirichletAllocation, topics: int, n_top_words: int) -> None:
         if topics < 10: height = 20
@@ -65,7 +72,7 @@ class TextMining:
         cluster_model.fit(reduced_data)
         return cluster_model
 
-    def plot_umaps(self, data: list, k: list, n_cluster: int = 3) -> None:
+    def plot_multiple_umaps(self, data: list, k: list, n_cluster: int = 3) -> None:
         def plot_single(data, n_cluster, axes, k):
             umap_df=pd.DataFrame(data, columns=[f'Component {i + 1}' for i in range(2)])
             kmeans_umap=self.clustering_kmeans(umap_df, n_cluster)
@@ -79,6 +86,27 @@ class TextMining:
         plot_single(data[2], n_cluster, axes[1][0], k=k[2])
         plot_single(data[3], n_cluster, axes[1][1], k=k[3])
         fig.tight_layout()
+        plt.show()
+
+    def plot_umaps(self, data: pd.DataFrame, k: list, n_cluster: int = 3, palette: str = 'viridis') -> None:
+        fig = plt.figure(figsize=(15, 15))
+        kmeans_umap = self.clustering_kmeans(data.loc[:, ['Component 1','Component 2']], n_cluster)
+        data['cluster'] = kmeans_umap.labels_
+        sns.scatterplot(data=data, x='Component 1', y='Component 2', hue=data['cluster'], palette=palette)
+        legend = plt.legend(fontsize="large")
+        for line in range(0, len(data)):
+            plt.annotate(data.labels[line].upper(),
+                         (data['Component 1'][line], data['Component 2'][line]),
+                         textcoords="offset points",
+                         xytext=(0, 5),
+                         ha='center',
+                         size='large',
+                         color = legend.legendHandles[data['cluster'][line]]._facecolors[0])
+        plt.title(f'UMAP dimensionality reduction k = {k}', fontsize=25)
+        plt.xticks([])
+        plt.yticks([])
+        plt.tight_layout()
+        sns.set_style('white')
         plt.show()
 
     def get_wordcloud_lsa(self, svd_model, topics) -> list:
@@ -159,4 +187,24 @@ class TextMining:
             axes[ax][ax1].imshow(word_clouded)
         fig.tight_layout()
         plt.show()
+
+    @staticmethod
+    def sort_coo(adj):
+        coo_matrix=adj.tocoo()
+        tuples=zip(coo_matrix.col, coo_matrix.data)
+        return sorted(tuples, key=lambda x: (x[1], x[0]), reverse=True)
+
+    @staticmethod
+    def extract_topn_from_vector(feature_names, sorted_items, topn=10):
+        sorted_items=sorted_items[:topn]
+        score_vals=[]
+        feature_vals=[]
+        for idx, score in sorted_items:
+            score_vals.append(round(score, 3))
+            feature_vals.append(feature_names[idx])
+        results={}
+        for idx in range(len(feature_vals)):
+            results[feature_vals[idx]]=score_vals[idx]
+        print(f"Keywords founded: {len(results)}")
+        return results
 

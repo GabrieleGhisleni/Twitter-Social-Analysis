@@ -2,6 +2,7 @@ from sklearn.cluster import SpectralClustering
 from nltk.probability import FreqDist
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
+from typing import Tuple
 import seaborn as sns
 import pandas as pd
 import numpy as np
@@ -11,7 +12,7 @@ import networkx
 
 
 class NetworkPlot:
-    def __init__(self, graph: networkx.Graph, frequency_dist: FreqDist, label_thresold: int, color_thresold: int = None, labels: list = None):
+    def __init__(self, graph: networkx.Graph, frequency_dist: FreqDist = None, label_thresold: int = None, color_thresold: int = None, labels: list = None):
         self.freq_dist = frequency_dist
         self.graph = graph
         self.label_thresold = label_thresold
@@ -49,6 +50,18 @@ class NetworkPlot:
                 res.append(self.colors[i])
         return res
 
+    def get_node_size_centrality_and_labels(self, centrality: dict, mul_factor: int) -> Tuple[list,dict]:
+        node_sizes, labelsss=[], {}
+        for u in self.graph.nodes():
+            flag=set()
+            if u in centrality:
+                node_sizes.append(self.freq_dist[u] * mul_factor)
+                labelsss[u]=u
+                flag.add(u)
+            else:
+                node_sizes.append(10)
+        return node_sizes, labelsss
+
     def plot(self):
         plt.figure(3, figsize=(22, 22))
         layout = networkx.spring_layout(self.graph)
@@ -66,12 +79,32 @@ class NetworkPlot:
                                       font_color='firebrick')
         plt.show()
 
+    def plot_main_centrality(self, res, mul_factor: int = 5):
+        plt.figure(3, figsize=(22, 22))
+        layout=networkx.spring_layout(self.graph)
+        node_sizes, labelsss = self.get_node_size_centrality_and_labels(res, mul_factor)
+        networkx.draw(G=self.graph,
+                      pos=layout,
+                      cmap=plt.get_cmap('autumn'),
+                      node_size=node_sizes,
+                      node_color='lightblue' if not np.array(self.labels).any() else self.get_node_color_clustering(),
+                      width=0.1)
+
+        networkx.draw_networkx_labels(self.graph,
+                                      pos=layout,
+                                      labels=labelsss,
+                                      font_size=25,
+                                      font_color='firebrick')
+        plt.show()
+
     @staticmethod
     def graph_filtered_dist(df: pd.DataFrame, distrib: FreqDist, thresold: int, obj: str = 'tweet') -> networkx.Graph:
         def check_thresold(word, distrib: FreqDist, value: int):
             return distrib.get(word) > value
         res = networkx.Graph()
-        bag = df['tweet_text'] if obj == 'tweet' else df['hashtags']
+        if obj=='tweet': bag= df['tweet_text']
+        elif obj =='hash': bag = df['hashtags']
+        else: bag = df
         for tweet in bag:
             if tweet:
                 for word in tweet:
@@ -113,9 +146,10 @@ class NetworkPlot:
                     graph.remove_node(node)
 
     @staticmethod
-    def spectral_clustering(graph: networkx.Graph, n_cluster: int) -> list:
+    def spectral_clustering(graph: networkx.Graph, n_cluster: int, k: int = 200) -> list:
         adj_matrix  = networkx.to_numpy_matrix(graph)
-        spectral_clustering = SpectralClustering(n_cluster, affinity='precomputed', n_init=100, assign_labels='discretize')
+        spectral_clustering=SpectralClustering(4, affinity='nearest_neighbors', n_init=100,
+                                               assign_labels='discretize', n_neighbors=k)
         spectral_clustering.fit(adj_matrix)
         return spectral_clustering.labels_
 
@@ -124,7 +158,7 @@ class NetworkPlot:
         names = ["Degree Centrality", "Degree Betwenness"]
         fig, axes = plt.subplots(2,1, figsize=(12, 10))
         for iel in range(len(levels_of_centrality)):
-            if iel == 0: to = 65
+            if iel == 0: to = 55
             else: to = 30
             tmp = dict(sorted(levels_of_centrality[iel].items(), key = operator.itemgetter(1), reverse=True)[:to])
             df = pd.DataFrame(tmp, index = [0]).T.reset_index()
@@ -153,3 +187,26 @@ class NetworkPlot:
         plt.xlabel('')
         plt.ylabel('')
         plt.show()
+
+    @staticmethod
+    def extract_top_centrality_words(centrality, percentage):
+        res = {}
+        for centr in centrality:
+            q, perc = 0, (len(centr) / 100 * percentage)
+            for i in centr.items():
+                if q < perc:
+                    if i[0] in res:
+                        if res[i[0]] < i[1]: res[i[0]]=i[1]
+                    else:
+                        res[i[0]]=i[1]
+                q+=1
+        return res
+
+    @staticmethod
+    def create_graph_from_top_centrality(graph, res):
+        tmp=[]
+        for (u, v, d) in graph.edges(data=True):
+            if u in res or v in res:
+                tmp.append((u, v, dict(count=d['count'])))
+        return networkx.Graph(tmp)
+

@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from typing import List
 import geopandas as gpd
 import seaborn as sns
+import datetime as time
 import pandas as pd
 import numpy as np
 import json, re
@@ -18,18 +19,18 @@ class NltkTextProcessing:
         self.stopwords = set(stopwords.words("italian"))
         self.increase_stopwords()
 
-    def preprocess_text(self, text, stem: bool = False, min_len: int = 5) -> List or None:
+    def preprocess_text(self, text, stem: bool = False, min_len: int = 3) -> List or None:
         tokenized, res = word_tokenize(text=text, language='it'), list()
-        if len(tokenized) < min_len:
-            return None
         for token in tokenized:
             if token not in self.stopwords and not token.isdigit() and len(token) > 2 and not token[0].isdigit():
                 if not token.startswith('ah') and 'juve' not in token and 'inter' not in token and not token.startswith('tw'):
-                    if not token.startswith('gx3'):
+                    if not token.startswith('gx3') and not token.startswith('cazz'):
                         if token == 'vaccini' or token == 'vaccinato' or token == 'vaccinati': token = 'vaccino'
                         if token == 'falsi': token = 'falso'
                         if token == 'grnpass': token = 'greenpass'
                         res.append(token)
+        if len(res) < min_len:
+            return None
         if stem: res = [self.stemmer.stem(word) for word in res]
         return res
 
@@ -68,7 +69,7 @@ class NltkTextProcessing:
                     'invece', 'a0xlp74lne', 'a4otny4rhy', 'aaa', 'aacmgmzanzio', 'aanzibma3f', 'ajgsd0w7mx', 'parli',
                     'vai','allegri', 'qusta', 'qusto', 'anch', 'prch', 'com', 'snza', 'dir', 'qlli', 'no', 'detto','dice',
                     'qualcuno','qualche','suggerito', 'quali', 'ieri','oggi', 'ile','cio','altra','via','ilpass','delpass',
-                    'quasi','die','andra','alle','https'}
+                    'quasi','die','andra','alle','https', 'luc','asono' ,'devo','avra','nun','non', 'accounthttps','ecc'}
         self.stopwords = self.stopwords.union(stopwords_)
 
     def get_location(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -101,9 +102,7 @@ class NltkTextProcessing:
         return pd.DataFrame(res, index=[0]).T.reset_index().rename(columns={'index':'date',0:'value'})
 
     def get_followers(self, df: pd.DataFrame) -> list:
-        x = sorted(df.author_followers.loc[df.author_followers > 1].tolist())
-        x.reverse()
-        return x
+        return sorted(df.author_followers.loc[df.author_followers > 1].tolist())
 
     def process_location(self, loc: pd.DataFrame) -> pd.DataFrame:
         italy_path="https://raw.githubusercontent.com/openpolis/geojson-italy/master/geojson/limits_IT_regions.geojson"
@@ -111,14 +110,14 @@ class NltkTextProcessing:
         italy.loc[italy.reg_name == 'Trentino-Alto Adige/Südtirol', ["reg_name"]] = 'Trentino-Alto Adige'
         return pd.merge(italy, loc, on='reg_name')
 
-    def plot_dates_location_followers(self, df: pd.DataFrame) -> None:
+    def plot_dates_location_followers(self, df: pd.DataFrame, save: bool = False) -> None:
         fig, axes=plt.subplots(1, 3, figsize=(20, 7))
         dates = self.get_dates(df)
         follower = self.get_followers(df)
         location = self.get_location(df)
         regions_df = self.process_location(location)
         sns.barplot(ax=axes[0], data=dates, y='date', x='value', palette='viridis')
-        sns.lineplot(ax=axes[2], y=follower, x=[iel for iel in range(len(follower))])
+        sns.lineplot(ax=axes[2], y=follower, x=[iel for iel in range(len(follower))], linewidth=5, color='firebrick')
         regions_df.plot(ax=axes[1],
                     column='value',
                     linewidth=0.1,
@@ -129,12 +128,19 @@ class NltkTextProcessing:
                     legend_kwds=dict(fmt='{:.0f}', frameon=False, loc='best'))
 
         axes[2].set_ylabel('Followers')
+        axes[2].set_title('Users-Followers distribution')
         axes[2].set_xticks([])
         axes[0].tick_params(labelrotation=0)
+        axes[0].set_title('Daily Rate')
+        axes[1].set_title('Location Distribution')
         axes[0].set_xlabel('')
+        axes[2].set_xlabel("User's index")
         axes[1].set_xticks([])
         axes[1].set_yticks([])
+        axes[2].yaxis.tick_right()
         fig.tight_layout()
+        if save:
+            plt.savefig('photos/dataset.eps', format='eps')
         plt.show()
 
     @staticmethod
@@ -161,7 +167,9 @@ class NltkTextProcessing:
     @staticmethod
     def frequency_dist(df: pd.DataFrame, obj: str = 'tweet') -> FreqDist:
         res = FreqDist()
-        bag = df['tweet_text'] if obj == 'tweet' else df['hashtags']
+        if obj=='tweet': bag= df['tweet_text']
+        elif obj =='hash': bag = df['hashtags']
+        else: bag = df
         for text in bag:
             if text:
                 for word in text: res[word] += 1
@@ -187,23 +195,38 @@ class NltkTextProcessing:
         return res
 
     @staticmethod
-    def prepare_text_to_vectorize(df: pd.DataFrame, afil: bool = False, obj = 'tweet') -> list:
-        def filter_(txt):
-            extra_filter={'nogreenpass', 'iononmivaccino'}
-            tmp = ' '.join(txt)
-            for word in extra_filter:
-                tmp = tmp.replace(word, '')
-                tmp = tmp.replace('  ', ' ')
-            return tmp
+    def prepare_text_to_vectorize(df: pd.DataFrame, obj = 'tweet') -> list:
         if obj == 'tweet':
-            if afil: return df['tweet_text'].apply(filter_).values.tolist()
-            else: return df['tweet_text'].apply(lambda x: ' '.join(x)).values.tolist()
-        else: return df['hashtags'].apply(lambda x: ' '.join(x)).values.tolist()
+            return df['tweet_text'].apply(lambda x: ''.join(x)).values.tolist()
+        else: return df['hashtags'].apply(lambda x: ''.join(x)).values.tolist()
 
 
+    def just_token(self, text, stem: bool = False):
+        ret = []
+        tokenized = word_tokenize(text=text, language='it')
+        if stem:
+            tokenized = [self.stemmer.stem(word) for word in tokenized]
+        for token in tokenized:
+            if token not in self.stopwords:
+                ret.append(token)
+        return ret
 
+    @staticmethod
+    def check_key(s, res):
+        ret=set()
+        for val in s:
+            if val in res: ret.add(val)
+        if ret: return list(ret)
+        else: return None
 
-
+    def take_only_keywords_from_tweets(self, tweets: pd.Series, sets, min_len: int = 1, stem: bool = False):
+        tokens = tweets.apply(self.just_token, stem=stem)
+        final = []
+        for t in tokens.apply(NltkTextProcessing.check_key, res=sets).dropna():
+            if len(t) > min_len:
+                final.append(t)
+        print(f"Remained docs: {len(final)}")
+        return final
 
 def update_parameter() -> None:
     large, med = 22, 16
@@ -213,4 +236,3 @@ def update_parameter() -> None:
             'ytick.labelsize': large, 'figure.titlesize': large}
     plt.rcParams.update(params)
     sns.set_style('whitegrid')
-
