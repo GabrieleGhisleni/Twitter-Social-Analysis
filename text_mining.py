@@ -36,7 +36,7 @@ class TextMining:
         lda.fit(encoded)
         return lda
 
-    def plot_lda_topic(self, model: LatentDirichletAllocation, topics: int, n_top_words: int) -> None:
+    def plot_lda_topic(self, model: LatentDirichletAllocation, topics: int, n_top_words: int, save: bool = False) -> None:
         if topics < 10: height = 20
         elif topics < 20: height = 35
         elif topics < 30: height = 55
@@ -54,6 +54,8 @@ class TextMining:
             sns.set_style('white')
             i += 1
         fig.tight_layout()
+        if save:
+            plt.savefig(f'photos/lda_topics.eps', format='eps')
         plt.show()
 
     def word_cloud_dict(self, model: LatentDirichletAllocation) -> dict:
@@ -88,7 +90,7 @@ class TextMining:
         fig.tight_layout()
         plt.show()
 
-    def plot_umaps(self, data: pd.DataFrame, k: list, n_cluster: int = 3, palette: str = 'viridis') -> None:
+    def plot_umaps(self, data: pd.DataFrame, k: list, n_cluster: int = 3, palette: str = 'viridis', save: str = None) -> None:
         fig = plt.figure(figsize=(15, 15))
         kmeans_umap = self.clustering_kmeans(data.loc[:, ['Component 1','Component 2']], n_cluster)
         data['cluster'] = kmeans_umap.labels_
@@ -107,6 +109,8 @@ class TextMining:
         plt.yticks([])
         plt.tight_layout()
         sns.set_style('white')
+        if save:
+            plt.savefig(f'photos/{save}-umap-{k}.eps', format='eps')
         plt.show()
 
     def get_wordcloud_lsa(self, svd_model, topics) -> list:
@@ -120,7 +124,7 @@ class TextMining:
             res.append(d)
         return res
 
-    def plot_lsa_topic(self, svd_model, topics, top_word):
+    def plot_lsa_topic(self, svd_model, topics, top_word, save: bool = False):
         fig, axes=plt.subplots(topics, 1, figsize=(20, 20))
         svd_df=pd.DataFrame(svd_model.components_, columns=(self.tfid_vectorizer.get_feature_names())).T
         for i in range(topics):
@@ -130,6 +134,8 @@ class TextMining:
             axes[i].set_ylabel('')
             axes[i].set_xlabel('')
         fig.tight_layout()
+        if save:
+            plt.savefig(f'photos/lsa-topic.eps', format='eps')
         plt.show()
 
     @staticmethod
@@ -142,7 +148,7 @@ class TextMining:
         return svd, svd_result
 
     @staticmethod
-    def plot_lsa(svd_result: np.array, kmeans_model: KMeans, n_components: int) -> None:
+    def plot_lsa(svd_result: np.array, kmeans_model: KMeans, n_components: int, save: bool = False) -> None:
         svd_df=pd.DataFrame(svd_result, columns=[f'Component {i + 1}' for i in range(n_components)])
         svd_df['cluster']=kmeans_model.labels_
         fig, axes=plt.subplots(1, 3, figsize=(23, 10))
@@ -153,6 +159,8 @@ class TextMining:
         sns.scatterplot(ax=axes[1], data=svd_df, x='Component 1', y='Component 3', hue='cluster', palette='tab10')
         sns.scatterplot(ax=axes[2], data=svd_df, x='Component 2', y='Component 3', hue='cluster', palette='tab10')
         fig.tight_layout()
+        if save:
+            plt.savefig(f'photos/lsa.eps', format='eps')
         plt.show()
 
     @staticmethod
@@ -165,7 +173,7 @@ class TextMining:
         return reducer.transform(data)
 
     @staticmethod
-    def plot_wordcloud(data, n_topics):
+    def plot_wordcloud(data, n_topics, save: str = None):
         if n_topics == 4: fig, axes=plt.subplots(2, 2, figsize=(20, 14))
         elif n_topics == 6: fig, axes=plt.subplots(3, 2, figsize=(20, 16))
         else: fig, axes=plt.subplots(4, 2, figsize=(20, 18))
@@ -186,6 +194,8 @@ class TextMining:
             axes[ax][ax1].set_title(f'Topic {iel+1} characterizing words', fontsize=25)
             axes[ax][ax1].imshow(word_clouded)
         fig.tight_layout()
+        if save:
+            plt.savefig(f'photos/{save}.eps', format='eps')
         plt.show()
 
     @staticmethod

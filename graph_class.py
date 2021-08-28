@@ -1,4 +1,5 @@
 from sklearn.cluster import SpectralClustering
+from sklearn.metrics import silhouette_score
 from nltk.probability import FreqDist
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
@@ -62,7 +63,7 @@ class NetworkPlot:
                 node_sizes.append(10)
         return node_sizes, labelsss
 
-    def plot(self):
+    def plot(self, save: str = None):
         plt.figure(3, figsize=(22, 22))
         layout = networkx.spring_layout(self.graph)
 
@@ -77,9 +78,11 @@ class NetworkPlot:
                                       labels=self.get_labels(),
                                       font_size=25,
                                       font_color='firebrick')
+        if save:
+            plt.savefig(f'photos/{save}.eps', format='eps')
         plt.show()
 
-    def plot_main_centrality(self, res, mul_factor: int = 5):
+    def plot_main_centrality(self, res, mul_factor: int = 5, save: str = None):
         plt.figure(3, figsize=(22, 22))
         layout=networkx.spring_layout(self.graph)
         node_sizes, labelsss = self.get_node_size_centrality_and_labels(res, mul_factor)
@@ -95,6 +98,8 @@ class NetworkPlot:
                                       labels=labelsss,
                                       font_size=25,
                                       font_color='firebrick')
+        if save:
+            plt.savefig(f'photos/{save}.png', format='png')
         plt.show()
 
     @staticmethod
@@ -106,7 +111,7 @@ class NetworkPlot:
         elif obj =='hash': bag = df['hashtags']
         else: bag = df
         for tweet in bag:
-            if tweet:
+            if np.array(tweet):
                 for word in tweet:
                     if check_thresold(word=word, distrib=distrib, value=thresold):
                         for pair in tweet:
@@ -154,7 +159,7 @@ class NetworkPlot:
         return spectral_clustering.labels_
 
     @staticmethod
-    def plot_centrality(levels_of_centrality: list):
+    def plot_centrality(levels_of_centrality: list, save: bool = False):
         names = ["Degree Centrality", "Degree Betwenness"]
         fig, axes = plt.subplots(2,1, figsize=(12, 10))
         for iel in range(len(levels_of_centrality)):
@@ -162,6 +167,7 @@ class NetworkPlot:
             else: to = 30
             tmp = dict(sorted(levels_of_centrality[iel].items(), key = operator.itemgetter(1), reverse=True)[:to])
             df = pd.DataFrame(tmp, index = [0]).T.reset_index()
+            df['index'] = df['index'].apply(lambda x: x[:7]+'[..]' if len(x) > 12 else x)
             sns.barplot(data=df, x='index', y=0, palette='viridis', ax = axes[iel])
             axes[iel].tick_params(labelrotation=90)
             axes[iel].set_title(names[iel], fontsize=25)
@@ -169,10 +175,12 @@ class NetworkPlot:
             axes[iel].set_ylabel('')
             axes[iel].set_yticks([])
         fig.tight_layout()
+        if save:
+            plt.savefig(f'photos/centrality_levels.eps', format='eps')
         plt.show()
 
     @staticmethod
-    def count_barplot(count: dict, thresold: int = 20) -> None:
+    def count_barplot(count: dict, thresold: int = 20, save: bool = False) -> None:
         fig=plt.figure(figsize=(20, 15))
         sns.set_style('white')
         word, freq=[], []
@@ -186,6 +194,8 @@ class NetworkPlot:
         plt.title('Most Frequent External URL\n\n', fontsize=35)
         plt.xlabel('')
         plt.ylabel('')
+        if save:
+            plt.savefig(f'photos/count_barplot.eps', format='eps')
         plt.show()
 
     @staticmethod
