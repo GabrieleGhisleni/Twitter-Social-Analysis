@@ -20,8 +20,9 @@ class TextMining:
         self.tfid_vectorizer = TfidfVectorizer(ngram_range=(1, ngram_range), norm='l2', max_df = 0.999, min_df = 1)
         self.count_vectorizer = CountVectorizer()
 
-    def vectorized_text(self, text_to_vectorize: list):
-        res = self.tfid_vectorizer.fit_transform(text_to_vectorize)
+    def vectorized_text(self, text_to_vectorize: list, count: bool = False):
+        if count: res = self.count_vectorizer.fit_transform(text_to_vectorize)
+        else: res = self.tfid_vectorizer.fit_transform(text_to_vectorize)
         print(f'Shape of the Sparse Matrix {res.shape}, type: {type(res)}')
         return res
 
@@ -29,33 +30,33 @@ class TextMining:
         return self.tfid_vectorizer.get_feature_names()
 
     def lda_topic_modeling(self, encoded, topics: int) -> LatentDirichletAllocation:
-        lda = LatentDirichletAllocation(n_components=topics, max_iter=5,
+        lda = LatentDirichletAllocation(n_components=topics, max_iter=15,
                                           learning_method='online',
-                                          learning_offset=50.,
+                                          learning_offset=15.,
                                           random_state=42)
         lda.fit(encoded)
         return lda
 
     def plot_lda_topic(self, model: LatentDirichletAllocation, topics: int, n_top_words: int, save: bool = False) -> None:
-        if topics < 10: height = 20
+        if topics < 10: height = 15
         elif topics < 20: height = 35
         elif topics < 30: height = 55
         else: height = 65
-        fig, axes = plt.subplots(topics, 1, figsize=(20, height))
+        fig, axes = plt.subplots(topics, 1, figsize=(18, height))
         features_names, i = self.tfid_vectorizer.get_feature_names(), 0
         for topic_idx, topic in enumerate(model.components_):
             top_features_ind = topic.argsort()[:-n_top_words - 1:-1]
             top_features = [features_names[i] for i in top_features_ind]
             weights = topic[top_features_ind]
-            sns.barplot(y=top_features, x=weights, ax=axes[i], palette='viridis')
+            sns.barplot(y=[i.upper() for i in top_features], x=weights, ax=axes[i], palette='viridis')
             axes[i].tick_params(axis='y', which='minor', labelsize=7)
-            axes[i].set_title(f'Topic {i} characterizing words', fontsize=20)
+            axes[i].set_title(f'Topic {i+1} characterizing words', fontsize=20)
             axes[i].set_xticks([])
             sns.set_style('white')
             i += 1
         fig.tight_layout()
         if save:
-            plt.savefig(f'photos/lda_topics.eps', format='eps')
+            plt.savefig(f'photos/lda_topics.eps', format='eps', dpi=300)
         plt.show()
 
     def word_cloud_dict(self, model: LatentDirichletAllocation) -> dict:
@@ -102,15 +103,17 @@ class TextMining:
                          textcoords="offset points",
                          xytext=(0, 5),
                          ha='center',
-                         size='large',
+                         weight='bold',
+                         size='x-large',
                          color = legend.legendHandles[data['cluster'][line]]._facecolors[0])
+
         plt.title(f'UMAP dimensionality reduction k = {k}', fontsize=25)
         plt.xticks([])
         plt.yticks([])
         plt.tight_layout()
         sns.set_style('white')
         if save:
-            plt.savefig(f'photos/{save}-umap-{k}.eps', format='eps')
+            plt.savefig(f'photos/{save}-umap-{k}.eps', format='eps', dpi=300)
         plt.show()
 
     def get_wordcloud_lsa(self, svd_model, topics) -> list:
@@ -135,7 +138,7 @@ class TextMining:
             axes[i].set_xlabel('')
         fig.tight_layout()
         if save:
-            plt.savefig(f'photos/lsa-topic.eps', format='eps')
+            plt.savefig(f'photos/lsa-topic.eps', format='eps',dpi=300)
         plt.show()
 
     @staticmethod

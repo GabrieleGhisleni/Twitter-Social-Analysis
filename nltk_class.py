@@ -69,7 +69,8 @@ class NltkTextProcessing:
                     'invece', 'a0xlp74lne', 'a4otny4rhy', 'aaa', 'aacmgmzanzio', 'aanzibma3f', 'ajgsd0w7mx', 'parli',
                     'vai','allegri', 'qusta', 'qusto', 'anch', 'prch', 'com', 'snza', 'dir', 'qlli', 'no', 'detto','dice',
                     'qualcuno','qualche','suggerito', 'quali', 'ieri','oggi', 'ile','cio','altra','via','ilpass','delpass',
-                    'quasi','die','andra','alle','https', 'luc','asono' ,'devo','avra','nun','non', 'accounthttps','ecc'}
+                    'quasi','die','andra','alle','https', 'luc','asono' ,'devo','avra','nun','non', 'accounthttps','ecc'
+                    ,'sti','qua','neanche','oltre','vuol','chissa'}
         self.stopwords = self.stopwords.union(stopwords_)
 
     def get_location(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -111,7 +112,7 @@ class NltkTextProcessing:
         return pd.merge(italy, loc, on='reg_name')
 
     def plot_dates_location_followers(self, df: pd.DataFrame, save: bool = False) -> None:
-        fig, axes=plt.subplots(1, 3, figsize=(20, 7))
+        fig, axes=plt.subplots(1, 3, figsize=(18, 7))
         dates = self.get_dates(df)
         follower = self.get_followers(df)
         location = self.get_location(df)
@@ -140,7 +141,7 @@ class NltkTextProcessing:
         axes[2].yaxis.tick_right()
         fig.tight_layout()
         if save:
-            plt.savefig('photos/dataset.eps', format='eps')
+            plt.savefig('photos/dataset.eps', format='eps', dpi=300)
         plt.show()
 
     @staticmethod
