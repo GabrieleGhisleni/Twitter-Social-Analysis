@@ -8,6 +8,7 @@ from typing import List
 import geopandas as gpd
 import seaborn as sns
 import datetime as time
+import unicodedata
 import pandas as pd
 import numpy as np
 import json, re
@@ -19,27 +20,53 @@ class NltkTextProcessing:
         self.stopwords = set(stopwords.words("italian"))
         self.increase_stopwords()
 
-    def preprocess_text(self, text, stem: bool = False, min_len: int = 3) -> List or None:
+    def tokenize_text(self, text, stem: bool = False, min_len: int = 3) -> List or None:
         tokenized, res = word_tokenize(text=text, language='it'), list()
         for token in tokenized:
-            if token not in self.stopwords and not token.isdigit() and len(token) > 2 and not token[0].isdigit():
-                if not token.startswith('ah') and 'juve' not in token and 'inter' not in token and not token.startswith('tw'):
-                    if not token.startswith('gx3') and not token.startswith('cazz'):
-                        if token == 'vaccini' or token == 'vaccinato' or token == 'vaccinati': token = 'vaccino'
-                        if token == 'falsi': token = 'falso'
-                        if token == 'grnpass': token = 'greenpass'
-                        res.append(token)
+            if token not in self.stopwords and len(token) > 2 and not token.startswith('AH') and not token.startswith('TW'):
+                if token.lower() ==' vaccini':
+                    token = 'vaccino'
+                res.append(token)
         if len(res) < min_len:
             return None
         if stem: res = [self.stemmer.stem(word) for word in res]
         return res
 
-    def process_df_text_column(self, df: pd.DataFrame, stem: bool, save: bool = False) -> pd.DataFrame:
-        df.loc[:, ['tweet_text']] = df['tweet_text'].apply(self.preprocess_text, stem=stem)
-        df = df[df['tweet_text'].notna()]
-        if save:
-            df.to_csv('tweets.csv')
-        return df
+    def clean_text(self, text: str) -> str:
+        def remove_emojy(text):
+            regrex_pattern=re.compile(pattern="["
+                                              u"\U0001F600-\U0001F64F"
+                                              u"\U0001F300-\U0001F5FF"
+                                              u"\U0001F680-\U0001F6FF"
+                                              u"\U0001F1E0-\U0001F1FF"
+                                              "]+", flags=re.UNICODE)
+            return regrex_pattern.sub(r'', text).replace('\n', ' ')
+        text = remove_emojy(text)
+        for word in text.split(' '):
+            if word.startswith('http'): text=text.replace(word, '')
+        text = unicodedata.normalize('NFD', text)
+        text = text.encode('ascii', 'ignore')
+        text = text.decode("utf-8")
+        text = text.replace("\n", '')
+        text = text.upper()
+        text = re.sub('[0-9$%]', ' ', text)
+        text = re.sub("[^a-zA-Z;@#]+", ' ', text)
+        for iel in range(4, 1, -1): text = text.replace(' ' * iel, ' ')
+        text = text.replace('  ', ' ')
+        text = text.strip()
+        return text
+
+    def process_df_text_column(self, df: pd.DataFrame, stem: bool, min_len: int = 3) -> pd.DataFrame:
+        df.loc[:, ['tweet_text']]=df['tweet_text'].apply(self.clean_text)
+        df.loc[:, ['tweet_text']] = df['tweet_text'].apply(self.tokenize_text, stem=stem, min_len=min_len)
+        return df[df['tweet_text'].notna()]
+
+    def take_only_keywords_from_tweets(self, tweets: pd.Series, sets, min_len: int = 1, stem: bool = False):
+        tokens, final = tweets.apply(self.tokenize_text, stem=stem, min_len=1), list()
+        for t in tokens.apply(NltkTextProcessing.check_key, res=sets).dropna():
+            if len(t) > min_len: final.append(t)
+        print(f"Remained docs: {len(final)}")
+        return final
 
     def unique_hashtags(self, df: pd.DataFrame):
         wl=set()
@@ -48,18 +75,8 @@ class NltkTextProcessing:
                 if len(hashs) > 3: wl.add(hashs)
         return wl
 
-    def remove_hashtag_from_text(self, df: pd.DataFrame):
-        hashtag_set = self.unique_hashtags(df)
-        def remove(s):
-            for word in s.split(' '):
-                if word in hashtag_set: s = s.replace(word, '')
-            for iel in range(1,5): s = s.replace('  ' * iel, '')
-            return s
-        df.loc[:, ['tweet_text']] = df['tweet_text'].apply(remove)
-        return df
-
     def increase_stopwords(self) -> None:
-        stopwords_={'ce', 'fa', 'tanto', 'comunque', 'ecco', 'sempre', 'perche', 'va', 'co', 't', 'vuole',
+        stopwords_ = {'ce', 'fa', 'tanto', 'comunque', 'ecco', 'sempre', 'perche', 'va', 'co', 't', 'vuole',
                     'dopo', 'https', 'poi', 'vedere', 'te', 'quest', 'do', 'no', 'pero', 'piu', 'quando',
                     'adesso', 'ogni', 'so', 'essere', 'tutta', 'senza', 'fatto', 'essere', 'oggi', 'cazzi', 'posso',
                     'altri', 'ah', 'quindi', 'gran', 'solo', 'ora', 'grazie', 'cosa', 'gia', 'me', '-', 'puoi',
@@ -68,15 +85,18 @@ class NltkTextProcessing:
                     'cosi', 'chiamano', 'capito', 'cazzo', 'raga', 'mai', 'avere', 'andare', 'invece', 'mesi', 'ancora',
                     'invece', 'a0xlp74lne', 'a4otny4rhy', 'aaa', 'aacmgmzanzio', 'aanzibma3f', 'ajgsd0w7mx', 'parli',
                     'vai','allegri', 'qusta', 'qusto', 'anch', 'prch', 'com', 'snza', 'dir', 'qlli', 'no', 'detto','dice',
-                    'qualcuno','qualche','suggerito', 'quali', 'ieri','oggi', 'ile','cio','altra','via','ilpass','delpass',
+                    'qualcuno','qualche','quali', 'ieri','oggi', 'ile','cio','altra','via','ilpass','delpass',
                     'quasi','die','andra','alle','https', 'luc','asono' ,'devo','avra','nun','non', 'accounthttps','ecc'
-                    ,'sti','qua','neanche','oltre','vuol','chissa'}
+                    ,'sti','qua','neanche','oltre','vuol','chissa','roma','torino','milano','ancona','nizza','catania','agosto',
+                    'settembre'}
         self.stopwords = self.stopwords.union(stopwords_)
+        self.stopwords = self.stopwords.union(set(map(str.upper, self.stopwords)))
+
 
     def get_location(self, df: pd.DataFrame) -> pd.DataFrame:
         with open('citta.json', 'r') as file:
             location = json.load(file)
-        region = inv_map = set(location.values())
+        region = set(location.values())
         punct = ['-','_','/',',','.','!','?']
         flag,res = True, list()
         for row in df.author_loc.dropna():
@@ -97,10 +117,15 @@ class NltkTextProcessing:
         loc.loc[loc.reg_name == 'Trentino-Alto Adige/S�dtirol', ['reg_name']] = 'Trentino-Alto Adige'
         return loc
 
-    def get_dates(self, df: pd.DataFrame) -> dict:
+    def get_dates(self, df: pd.DataFrame) -> pd.DataFrame:
+        def rename_month(txt):
+            if txt[0:2] == '08': return f"{txt[3:]} Aug"
+            else: return f"{txt[3:]} Sept"
         date, value = np.unique(df.created_at.apply(lambda x: x[5:10]).tolist(), return_counts=True)
         res = dict(zip(date, value))
-        return pd.DataFrame(res, index=[0]).T.reset_index().rename(columns={'index':'date',0:'value'})
+        tmp = pd.DataFrame(res, index=[0]).T.reset_index().rename(columns={'index':'date',0:'value'})
+        tmp.loc[:, 'date'] = tmp.loc[:, 'date'].apply(rename_month)
+        return tmp
 
     def get_followers(self, df: pd.DataFrame) -> list:
         return sorted(df.author_followers.loc[df.author_followers > 1].tolist())
@@ -127,7 +152,6 @@ class NltkTextProcessing:
                     legend=True,
                     markersize=45,
                     legend_kwds=dict(fmt='{:.0f}', frameon=False, loc='best'))
-
         axes[2].set_ylabel('Followers')
         axes[2].set_title('Users-Followers distribution')
         axes[2].set_xticks([])
@@ -201,17 +225,6 @@ class NltkTextProcessing:
             return df['tweet_text'].apply(lambda x: ''.join(x)).values.tolist()
         else: return df['hashtags'].apply(lambda x: ''.join(x)).values.tolist()
 
-
-    def just_token(self, text, stem: bool = False):
-        ret = []
-        tokenized = word_tokenize(text=text, language='it')
-        if stem:
-            tokenized = [self.stemmer.stem(word) for word in tokenized]
-        for token in tokenized:
-            if token not in self.stopwords:
-                ret.append(token)
-        return ret
-
     @staticmethod
     def check_key(s, res):
         ret=set()
@@ -220,14 +233,6 @@ class NltkTextProcessing:
         if ret: return list(ret)
         else: return None
 
-    def take_only_keywords_from_tweets(self, tweets: pd.Series, sets, min_len: int = 1, stem: bool = False):
-        tokens = tweets.apply(self.just_token, stem=stem)
-        final = []
-        for t in tokens.apply(NltkTextProcessing.check_key, res=sets).dropna():
-            if len(t) > min_len:
-                final.append(t)
-        print(f"Remained docs: {len(final)}")
-        return final
 
 def update_parameter() -> None:
     large, med = 22, 16

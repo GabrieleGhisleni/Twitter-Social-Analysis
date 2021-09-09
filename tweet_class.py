@@ -107,21 +107,7 @@ def extended_tweet(tweet: dict, first_clean: bool = False) -> str:
         elif 'text' in tweet['retweeted_status']:
             text = tweet['retweeted_status']['text']
     else: text = tweet['text']
-    if first_clean: return text_first_clean(text)
-    else: return text
-
-
-def text_first_clean(text: str) -> str:
-    for word in text.split(' '):
-        if word.startswith('@') or word.startswith('http'): text = text.replace(word, '')
-    text = unicodedata.normalize('NFD', text)
-    text = text.encode('ascii', 'ignore')
-    text = text.decode("utf-8")
-    text = text.replace("\n", '')
-    text = text.lower()
-    text = re.sub("[^a-zA-Z]+", ' ', text)
     return text
-
 
 def find_external_url(tweet: dict) -> str or None:
     if 'retweeted_status' in tweet:

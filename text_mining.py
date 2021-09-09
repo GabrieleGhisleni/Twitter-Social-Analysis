@@ -176,11 +176,11 @@ class TextMining:
         return reducer.transform(data)
 
     @staticmethod
-    def plot_wordcloud(data, n_topics, save: str = None):
+    def plot_wordcloud(data, n_topics, save: str = None, palette='viridis'):
         if n_topics == 4: fig, axes=plt.subplots(2, 2, figsize=(20, 14))
         elif n_topics == 6: fig, axes=plt.subplots(3, 2, figsize=(20, 16))
         else: fig, axes=plt.subplots(4, 2, figsize=(20, 18))
-        wordcloud=WordCloud(margin=10, background_color='white', colormap='inferno', width=640, height=400,
+        wordcloud=WordCloud(margin=10, background_color='white', colormap=palette, width=640, height=400,
                             max_words=150)
         for iel in range(n_topics):
             if iel == 0: ax, ax1 = 0, 0
@@ -209,9 +209,9 @@ class TextMining:
 
     @staticmethod
     def extract_topn_from_vector(feature_names, sorted_items, topn=10):
-        sorted_items=sorted_items[:topn]
-        score_vals=[]
-        feature_vals=[]
+        sorted_items = sorted_items[:topn]
+        score_vals = []
+        feature_vals = []
         for idx, score in sorted_items:
             score_vals.append(round(score, 3))
             feature_vals.append(feature_names[idx])

@@ -85,10 +85,10 @@ class NetworkPlot:
             plt.savefig(f'photos/{save}.eps', format='eps', dpi=300)
         plt.show()
 
-    def plot_main_centrality(self, res, mul_factor: int = 5, save: str = None, upper=True):
+    def plot_main_centrality(self, res, mul_factor: int = 5, save: str = None, upper=True, k=2, i=50, w='count'):
         fig, axes= plt.subplots(1,1, figsize=(20, 20))
         plt.style.use('seaborn-white')
-        layout=networkx.spring_layout(self.graph)
+        layout=networkx.spring_layout(self.graph, k=k, iterations=i, weight=w)
         node_sizes, labels = self.get_node_size_centrality_and_labels(res, mul_factor, upper)
 
         networkx.draw_networkx_nodes(G=self.graph,
@@ -97,25 +97,17 @@ class NetworkPlot:
                                   node_size=node_sizes,
                                   node_color='lightblue' if not np.array(self.labels).any() else self.get_node_color_clustering(),
                                   ax=axes,
-                                  alpha=0.6)
+                                  alpha=0.8)
 
         networkx.draw_networkx_edges(G=self.graph,
                                      pos=layout,
-                                     width=0.1)
-
-        # networkx.draw(G=self.graph,
-        #               pos=layout,
-        #               cmap=plt.get_cmap('autumn'),
-        #               node_size=node_sizes,
-        #               node_color='lightblue' if not np.array(self.labels).any() else self.get_node_color_clustering(),
-        #               width=0.1,
-        #               ax=axes,
-        #               alpha=0.6)
+                                     width = [self.graph[u][v]['count'] / 10 for u,v in self.graph.edges],
+                                     alpha=0.15)
 
         networkx.draw_networkx_labels(self.graph,
                                       pos=layout,
                                       labels=labels,
-                                      font_size=15,
+                                      font_size=17,
                                       ax=axes,
                                       font_color='black',
                                       font_weight='bold',
@@ -214,12 +206,16 @@ class NetworkPlot:
         return res
 
     @staticmethod
-    def spectral_clustering(graph: networkx.Graph, n_cluster: int, k: int = 200) -> list:
-        adj_matrix  = networkx.to_numpy_matrix(graph)
-        spectral_clustering=SpectralClustering(4, affinity='nearest_neighbors', n_init=100,
-                                               assign_labels='discretize', n_neighbors=k)
+    def spectral_clustering(graph: networkx.Graph, n_cluster: int, k: int = None, gamma: float = 1.0, w = 'count', check = False):
+        adj_matrix  = networkx.to_numpy_matrix(graph, weight=w)
+        if k: spectral_clustering=SpectralClustering(n_cluster, affinity='nearest_neighbors', n_init=500, assign_labels='discretize', n_neighbors=k)
+        else: spectral_clustering=SpectralClustering(n_cluster, affinity='rbf', assign_labels='discretize', gamma=gamma)
         spectral_clustering.fit(adj_matrix)
-        return spectral_clustering.labels_
+        counts, sil =  np.unique(spectral_clustering.labels_, return_counts=True)[1].tolist() ,silhouette_score(adj_matrix, spectral_clustering.labels_)
+        if check: return silhouette_score(adj_matrix, spectral_clustering.labels_)
+        else:
+            print(f"""Cluster distribution: {counts}, Silhouette Score: {sil}""")
+            return spectral_clustering, spectral_clustering.labels_
 
     @staticmethod
     def plot_centrality(levels_of_centrality: list, save: bool = False, h=10):
@@ -243,8 +239,8 @@ class NetworkPlot:
         plt.show()
 
     @staticmethod
-    def plot_centrality_v(levels_of_centrality: list, save: bool = False, h=15, names="Degree Centrality,Degree Betwenness,Degree Closeness"):
-        fig, axes=plt.subplots(len(levels_of_centrality), 1, figsize=(12, h))
+    def plot_centrality_v(levels_of_centrality: list, save: bool = False, h=15, names="Degree Centrality,Degree Betwenness,Degree Closeness", lb=15):
+        fig, axes=plt.subplots(len(levels_of_centrality), 1, figsize=(8, h))
         for iel in range(len(levels_of_centrality)):
             if iel == 0:
                 to=15
@@ -260,6 +256,7 @@ class NetworkPlot:
             axes[iel].set_xlabel('')
             axes[iel].set_ylabel('')
             axes[iel].set_xticks([])
+            axes[iel].tick_params(axis='both', which='major', labelsize=lb)
         fig.tight_layout()
         if save:
             plt.savefig(f'photos/centrality_levels_v.eps', format='eps', dpi=300)
@@ -294,4 +291,27 @@ class NetworkPlot:
         plt.show()
 
 
+    @staticmethod
+    def find_best_k_and_cluster(graph: networkx.Graph, k, gamma) -> dict:
+        n_cluster = [3, 4, 5, 6, 7, 8, 9, 10, 15]
+        res = {}
+        for i in n_cluster:
+            res[i], tmp, tmp_e = {}, 0, 0
+            for j in range(len(k)):
+                try:
+                    score = NetworkPlot.spectral_clustering(graph, n_cluster=i, k=k[j], w='count', check=True)
+                    if score > tmp:
+                        tmp = score
+                        z = (k[j], score)
+                except Exception:
+                    z = None
+                try:
+                    score = NetworkPlot.spectral_clustering(graph, n_cluster=i, gamma=gamma[j], w='count', check=True)
+                    if score > tmp_e:
+                        tmp_e = score
+                        z_e = (gamma[j], score)
+                except Exception:
+                    z_e = None
+            res[i]= z, z_e
+        return res
 
