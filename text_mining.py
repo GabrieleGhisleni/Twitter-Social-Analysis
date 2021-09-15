@@ -17,7 +17,7 @@ import umap
 
 class TextMining:
     def __init__(self, ngram_range: int = 1):
-        self.tfid_vectorizer = TfidfVectorizer(ngram_range=(1, ngram_range), norm='l2', max_df = 0.999, min_df = 1)
+        self.tfid_vectorizer = TfidfVectorizer(ngram_range=(1, ngram_range), norm='l2')
         self.count_vectorizer = CountVectorizer()
 
     def vectorized_text(self, text_to_vectorize: list, count: bool = False):
@@ -50,7 +50,7 @@ class TextMining:
             weights = topic[top_features_ind]
             sns.barplot(y=[i.upper() for i in top_features], x=weights, ax=axes[i], palette='viridis')
             axes[i].tick_params(axis='y', which='minor', labelsize=7)
-            axes[i].set_title(f'Topic {i+1} characterizing words', fontsize=20)
+            axes[i].set_title(f'TOPIC {i+1} Characterizing words', fontsize=30)
             axes[i].set_xticks([])
             sns.set_style('white')
             i += 1
@@ -91,7 +91,7 @@ class TextMining:
         fig.tight_layout()
         plt.show()
 
-    def plot_umaps(self, data: pd.DataFrame, k: list, n_cluster: int = 3, palette: str = 'viridis', save: str = None) -> None:
+    def plot_umaps(self, data: pd.DataFrame, k: list, n_cluster: int = 3, palette: str = 'viridis', save: str = None, l = 10) -> None:
         fig = plt.figure(figsize=(15, 15))
         kmeans_umap = self.clustering_kmeans(data.loc[:, ['Component 1','Component 2']], n_cluster)
         data['cluster'] = kmeans_umap.labels_
@@ -104,7 +104,7 @@ class TextMining:
                          xytext=(0, 5),
                          ha='center',
                          weight='bold',
-                         size='x-large',
+                         size= l,
                          color = legend.legendHandles[data['cluster'][line]]._facecolors[0])
 
         plt.title(f'UMAP dimensionality reduction k = {k}', fontsize=25)
@@ -176,26 +176,44 @@ class TextMining:
         return reducer.transform(data)
 
     @staticmethod
-    def plot_wordcloud(data, n_topics, save: str = None, palette='viridis'):
-        if n_topics == 4: fig, axes=plt.subplots(2, 2, figsize=(20, 14))
-        elif n_topics == 6: fig, axes=plt.subplots(3, 2, figsize=(20, 16))
-        else: fig, axes=plt.subplots(4, 2, figsize=(20, 18))
-        wordcloud=WordCloud(margin=10, background_color='white', colormap=palette, width=640, height=400,
-                            max_words=150)
-        for iel in range(n_topics):
-            if iel == 0: ax, ax1 = 0, 0
-            elif iel == 1: ax, ax1 = 0, 1
-            elif iel == 2: ax, ax1 = 1, 0
-            elif iel == 3: ax, ax1 = 1, 1
-            elif iel == 4: ax, ax1 = 2, 0
-            elif iel == 5: ax, ax1 = 2, 1
-            elif iel == 6: ax, ax1 = 3, 0
-            elif iel == 7: ax, ax1 = 3, 1
-            word_clouded=wordcloud.generate_from_frequencies(data[iel])
-            axes[ax][ax1].set_xticks([])
-            axes[ax][ax1].set_yticks([])
-            axes[ax][ax1].set_title(f'Topic {iel+1} characterizing words', fontsize=25)
-            axes[ax][ax1].imshow(word_clouded)
+    def plot_wordcloud(data, n_topics, save: str = None, palette='viridis', ft=35):
+        if n_topics == 3:
+            fig=plt.figure(figsize=(20, 17))
+            wordcloud=WordCloud(margin=10, background_color='white', colormap=palette, width=600, height=400,
+                                max_words=150)
+            ax1=plt.subplot2grid((2, 2), (0, 0), colspan=2)
+            ax2=plt.subplot2grid((2, 2), (1, 0))
+            ax3=plt.subplot2grid((2, 2), (1, 1))
+            axes=[ax1, ax2, ax3]
+            for iel in range(n_topics):
+                word_clouded=wordcloud.generate_from_frequencies(data[iel])
+                axes[iel].set_xticks([])
+                axes[iel].set_yticks([])
+                axes[iel].set_title(f'\nTOPIC {iel + 1} Characterizing Words', fontsize=ft)
+                axes[iel].imshow(word_clouded)
+        else:
+            if n_topics == 4:
+                fig, axes=plt.subplots(2, 2, figsize=(20, 14))
+            elif n_topics == 6:
+                fig, axes=plt.subplots(3, 2, figsize=(20, 16))
+            else:
+                fig, axes=plt.subplots(4, 2, figsize=(20, 18))
+            wordcloud=WordCloud(margin=10, background_color='white', colormap=palette, width=640, height=400,
+                                max_words=150)
+            for iel in range(n_topics):
+                if iel == 0: ax, ax1=0, 0
+                elif iel == 1: ax, ax1=0, 1
+                elif iel == 2: ax, ax1=1, 0
+                elif iel == 3: ax, ax1=1, 1
+                elif iel == 4: ax, ax1=2, 0
+                elif iel == 5: ax, ax1=2, 1
+                elif iel == 6: ax, ax1=3, 0
+                elif iel == 7: ax, ax1=3, 1
+                word_clouded=wordcloud.generate_from_frequencies(data[iel])
+                axes[ax][ax1].set_xticks([])
+                axes[ax][ax1].set_yticks([])
+                axes[ax][ax1].set_title(f'TOPIC {iel + 1} Characterizing Words', fontsize=ft)
+                axes[ax][ax1].imshow(word_clouded)
         fig.tight_layout()
         if save:
             plt.savefig(f'photos/{save}.eps', format='eps')

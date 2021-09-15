@@ -64,45 +64,27 @@ class NetworkPlot:
                 node_sizes.append(15)
         return node_sizes, labelsss
 
-    def plot(self, save: str = None):
-        plt.figure(3, figsize=(22, 22))
-        layout = networkx.spring_layout(self.graph)
-
-        networkx.draw(G=self.graph,
-                      pos=layout,
-                      cmap=plt.get_cmap('autumn'),
-                      node_size=self.get_node_size(),
-                      node_color=self.get_node_thresold_color() if self.color_thresold else self.get_node_color_clustering())
-
-        networkx.draw_networkx_labels(self.graph,
-                                      pos=layout,
-                                      labels=self.get_labels(),
-                                      font_size=22,
-                                      font_color='black',
-                                      font_weight='bold',
-                                      verticalalignment='baseline')
-        if save:
-            plt.savefig(f'photos/{save}.eps', format='eps', dpi=300)
-        plt.show()
-
-    def plot_main_centrality(self, res, mul_factor: int = 5, save: str = None, upper=True, k=2, i=50, w='count'):
+    def plot_main_centrality(self, res, mul_factor: int = 5, save: str = None, upper=True, k=2, i=50, w='count', ka=True, c=None):
         fig, axes= plt.subplots(1,1, figsize=(20, 20))
         plt.style.use('seaborn-white')
-        layout=networkx.spring_layout(self.graph, k=k, iterations=i, weight=w)
+        if ka: layout = networkx.kamada_kawai_layout(self.graph, weight=w)
+        else: layout = networkx.spring_layout(self.graph, weight=w, k=k, iterations=i)
         node_sizes, labels = self.get_node_size_centrality_and_labels(res, mul_factor, upper)
 
         networkx.draw_networkx_nodes(G=self.graph,
                                   pos=layout,
                                   cmap=plt.get_cmap('autumn'),
                                   node_size=node_sizes,
-                                  node_color='lightblue' if not np.array(self.labels).any() else self.get_node_color_clustering(),
+                                  node_color='lightblue' if not np.array(self.labels).any() else self.get_node_color_clustering(colors=c),
                                   ax=axes,
                                   alpha=0.8)
 
         networkx.draw_networkx_edges(G=self.graph,
+                                     edge_color='black',
+                                     # edge_color= 'black' if not np.array(self.labels).any() else self.get_node_color_clustering(),
                                      pos=layout,
-                                     width = [self.graph[u][v]['count'] / 10 for u,v in self.graph.edges],
-                                     alpha=0.15)
+                                     width = [self.graph[u][v]['count'] / 7 for u,v in self.graph.edges],
+                                     alpha=0.10)
 
         networkx.draw_networkx_labels(self.graph,
                                       pos=layout,
@@ -239,6 +221,25 @@ class NetworkPlot:
         plt.show()
 
     @staticmethod
+    def plot_single_centrality_v(levels_of_centrality: dict, name, to, save: bool = False, h=15, lb=15):
+        fig = plt.figure(figsize=(12, h))
+        tmp = dict(sorted(levels_of_centrality.items(), key=operator.itemgetter(1), reverse=True)[:to])
+        df = pd.DataFrame(tmp, index=[0]).T.reset_index()
+        df['index'] = df['index'].apply(lambda x: x[:7] + '[..]' if len(x) > 10 else x)
+        df['index'] = df['index'].apply(lambda x: x.upper())
+        sns.barplot(data=df, y='index', x=0, palette='viridis')
+        plt.tick_params(labelrotation=0)
+        plt.title(f"Highest {name}")
+        plt.xlabel('')
+        plt.ylabel('')
+        plt.xticks([])
+        plt.tick_params(axis='both', which='major', labelsize=lb)
+        fig.tight_layout()
+        if save:
+            plt.savefig(f'photos/centrality_levels_v.eps', format='eps', dpi=300)
+        plt.show()
+
+    @staticmethod
     def plot_centrality_v(levels_of_centrality: list, save: bool = False, h=15, names="Degree Centrality,Degree Betwenness,Degree Closeness", lb=15):
         fig, axes=plt.subplots(len(levels_of_centrality), 1, figsize=(8, h))
         for iel in range(len(levels_of_centrality)):
@@ -263,31 +264,33 @@ class NetworkPlot:
         plt.show()
 
     @staticmethod
-    def count_barplot(count: dict, thresold: int = None, to: int = 10, save: bool = False) -> None:
-        fig=plt.figure(figsize=(14, 6))
-        sns.set_style('white')
-        word, freq=[], []
-        if thresold:
-            for key in count:
-                if count[key] > thresold:
-                    word.append(key)
-                    freq.append(count[key])
-            df=pd.DataFrame(freq, word).reset_index(). \
-                rename(columns={'index': 'words', 0: 'freq'}).sort_values(by='freq', ascending=False)
-        else:
-            def filters_k(s):
-                if s.startswith('www'): s = s[4:]
-                if s.endswith('/'): s = s[:-1]
-                return s.upper()
-            freq = dict(sorted(count.items(), key=operator.itemgetter(1), reverse=True)[:to])
-            df = pd.DataFrame(freq, index=[0]).T.reset_index().rename(columns={'index':'words', 0:'freq'})
-            df.loc[:, 'words'] = df.words.apply(filters_k)
-        sns.barplot(y='words', x="freq", data=df, palette='viridis')
-        # plt.title('Most Frequent External URL\n\n', fontsize=35)
+    def count_barplot(count: dict, name, title, ticks, to: int = 10, save = False, h=20, w=20, r=False) -> None:
+        def filters_k(s):
+            if s.startswith('www'): s=s[4:]
+            if s.endswith('/'): s=s[:-1]
+            return s.upper()
+        freq = dict(sorted(count.items(), key=operator.itemgetter(1), reverse=True)[:to])
+        df = pd.DataFrame(freq, index=[0]).T.reset_index().rename(columns={'index': 'words', 0: 'freq'})
+        df.loc[:, 'words'] = df.words.apply(filters_k)
+        fig = plt.figure(figsize=(w, h))
+        sns.barplot(y='words', x="freq", data=df, color='royalblue', edgecolor='blue', alpha=0.4)
+        plt.title(f'{title}', fontsize=35)
         plt.xlabel('')
         plt.ylabel('')
+        for line in range(0, len(df)):
+            if line < 5 and r: ha = 'right'
+            else: ha = 'left'
+            plt.annotate(df.words[line].upper(),
+                             (df.freq[line], line),
+                             textcoords="offset points",
+                             xytext=(2, -10),
+                             ha=ha,
+                             weight='bold',
+                             size=25)
+        plt.yticks([])
+        plt.xticks(ticks)
         if save:
-            plt.savefig(f'photos/count_barplot.eps', format='eps', dpi=300)
+            plt.savefig(f'photos/{name}.png', format='png', dpi=300)
         plt.show()
 
 
@@ -315,3 +318,11 @@ class NetworkPlot:
             res[i]= z, z_e
         return res
 
+    @staticmethod
+    def extend_top_word(graph, thresold, res):
+        ret = res.copy()
+        for u, v in graph.edges:
+            if graph[u][v]['count'] > thresold:
+                ret.add(u)
+                ret.add(v)
+        return ret

@@ -24,8 +24,9 @@ class NltkTextProcessing:
         tokenized, res = word_tokenize(text=text, language='it'), list()
         for token in tokenized:
             if token not in self.stopwords and len(token) > 2 and not token.startswith('AH') and not token.startswith('TW'):
-                if token.lower() ==' vaccini':
-                    token = 'vaccino'
+                if token.lower() == 'vaccini': token = 'vaccino'.upper()
+                if token.lower() == 'vaccinati': token = 'vaccinato'.upper()
+                if token.lower() == 'manifestazioni': token='manifestazione'.upper()
                 res.append(token)
         if len(res) < min_len:
             return None
@@ -88,7 +89,8 @@ class NltkTextProcessing:
                     'qualcuno','qualche','quali', 'ieri','oggi', 'ile','cio','altra','via','ilpass','delpass',
                     'quasi','die','andra','alle','https', 'luc','asono' ,'devo','avra','nun','non', 'accounthttps','ecc'
                     ,'sti','qua','neanche','oltre','vuol','chissa','roma','torino','milano','ancona','nizza','catania','agosto',
-                    'settembre'}
+                    'settembre','alessandro','nulla','bene','sabato','domenica','napoli', 'MATTEOSALVINIMI','pochi','anni','molti',
+                    'mica', 'rincoglionito','due','tre'}
         self.stopwords = self.stopwords.union(stopwords_)
         self.stopwords = self.stopwords.union(set(map(str.upper, self.stopwords)))
 
