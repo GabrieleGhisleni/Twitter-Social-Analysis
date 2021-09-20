@@ -64,11 +64,11 @@ class NetworkPlot:
                 node_sizes.append(15)
         return node_sizes, labelsss
 
-    def plot_main_centrality(self, res, mul_factor: int = 5, save: str = None, upper=True, k=2, i=50, w='count', ka=True, c=None):
+    def plot_main_centrality(self, res, mul_factor: int = 5, save: str = None, upper=True, k=2, i=50, w='count', ka=True, c=None, a=0.1, s=None):
         fig, axes= plt.subplots(1,1, figsize=(20, 20))
         plt.style.use('seaborn-white')
         if ka: layout = networkx.kamada_kawai_layout(self.graph, weight=w)
-        else: layout = networkx.spring_layout(self.graph, weight=w, k=k, iterations=i)
+        else: layout = networkx.spring_layout(self.graph, weight=w, k=k, iterations=i, seed=s)
         node_sizes, labels = self.get_node_size_centrality_and_labels(res, mul_factor, upper)
 
         networkx.draw_networkx_nodes(G=self.graph,
@@ -84,7 +84,7 @@ class NetworkPlot:
                                      # edge_color= 'black' if not np.array(self.labels).any() else self.get_node_color_clustering(),
                                      pos=layout,
                                      width = [self.graph[u][v]['count'] / 7 for u,v in self.graph.edges],
-                                     alpha=0.10)
+                                     alpha=a)
 
         networkx.draw_networkx_labels(self.graph,
                                       pos=layout,
