@@ -94,7 +94,6 @@ class NltkTextProcessing:
         self.stopwords = self.stopwords.union(stopwords_)
         self.stopwords = self.stopwords.union(set(map(str.upper, self.stopwords)))
 
-
     def get_location(self, df: pd.DataFrame) -> pd.DataFrame:
         with open('citta.json', 'r') as file:
             location = json.load(file)
