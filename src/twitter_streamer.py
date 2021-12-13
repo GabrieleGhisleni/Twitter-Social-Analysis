@@ -1,6 +1,5 @@
 from json_manager import JsonManager
 from tweet_class import Tweet
-from keys import get_api_aws
 from typing import List
 import traceback
 import argparse
