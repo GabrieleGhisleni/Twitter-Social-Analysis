@@ -94,8 +94,8 @@ class NltkTextProcessing:
         self.stopwords = self.stopwords.union(stopwords_)
         self.stopwords = self.stopwords.union(set(map(str.upper, self.stopwords)))
 
-    def get_location(self, df: pd.DataFrame) -> pd.DataFrame:
-        with open('citta.json', 'r') as file:
+    def get_location(self, df: pd.DataFrame, path: str='data/citta.json') -> pd.DataFrame:
+        with open(path, 'r') as file:
             location = json.load(file)
         region = set(location.values())
         punct = ['-','_','/',',','.','!','?']
@@ -137,11 +137,11 @@ class NltkTextProcessing:
         italy.loc[italy.reg_name == 'Trentino-Alto Adige/Südtirol', ["reg_name"]] = 'Trentino-Alto Adige'
         return pd.merge(italy, loc, on='reg_name')
 
-    def plot_dates_location_followers(self, df: pd.DataFrame, save: bool = False) -> None:
+    def plot_dates_location_followers(self, df: pd.DataFrame, save: bool = False, path: str='data/citta.json') -> None:
         fig, axes=plt.subplots(1, 3, figsize=(18, 7))
         dates = self.get_dates(df)
         follower = self.get_followers(df)
-        location = self.get_location(df)
+        location = self.get_location(df, path)
         regions_df = self.process_location(location)
         sns.barplot(ax=axes[0], data=dates, y='date', x='value', palette='viridis')
         sns.lineplot(ax=axes[2], y=follower, x=[iel for iel in range(len(follower))], linewidth=5, color='firebrick')
@@ -243,3 +243,4 @@ def update_parameter() -> None:
             'ytick.labelsize': large, 'figure.titlesize': large}
     plt.rcParams.update(params)
     sns.set_style('whitegrid')
+

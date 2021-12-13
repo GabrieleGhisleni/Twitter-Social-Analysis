@@ -67,7 +67,7 @@ def main():
          'terzadose', 'PassSanitaire','somministrazioneDiCortesia']
 
     listener = TwitterStreamAPI(path_json=args.path, first_clean=args.clean)
-    myStream = tweepy.Stream(auth=get_api_aws().auth, listener=listener)
+    myStream = tweepy.Stream(auth=TwitterStreamAPI.get_api().auth, listener=listener)
     myStream.filter(track=q, languages=['it'])
 
 if __name__ == '__main__':
